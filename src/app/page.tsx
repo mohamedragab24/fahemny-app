@@ -4,10 +4,10 @@ import { ArrowRight, Briefcase, DollarSign, Search, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { getI18n } from "@/locales/server";
+import ar from "@/locales/ar";
 
 export default async function Home() {
-  const t = await getI18n();
+  const t = ar;
   const heroImage = PlaceHolderImages.find(p => p.id === 'hero-background');
   const employerImage = PlaceHolderImages.find(p => p.id === 'employer-feature');
   const freelancerImage = PlaceHolderImages.find(p => p.id === 'freelancer-feature');

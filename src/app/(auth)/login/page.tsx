@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useI18n } from "@/locales/client";
+import ar from "@/locales/ar";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -33,7 +33,7 @@ const loginSchema = z.object({
 });
 
 export default function LoginPage() {
-  const t = useI18n();
+  const t = ar.login;
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
@@ -67,9 +67,9 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-headline">{t('login.title')}</CardTitle>
+        <CardTitle className="text-2xl font-headline">{t.title}</CardTitle>
         <CardDescription>
-          {t('login.description')}
+          {t.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -80,11 +80,11 @@ export default function LoginPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('login.email_label')}</FormLabel>
+                  <FormLabel>{t.email_label}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder={t('login.email_placeholder')}
+                      placeholder={t.email_placeholder}
                       {...field}
                     />
                   </FormControl>
@@ -97,7 +97,7 @@ export default function LoginPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('login.password_label')}</FormLabel>
+                  <FormLabel>{t.password_label}</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} />
                   </FormControl>
@@ -106,15 +106,15 @@ export default function LoginPage() {
               )}
             />
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-               {form.formState.isSubmitting ? t('login.submitting_button') : t('login.submit_button')}
+               {form.formState.isSubmitting ? t.submitting_button : t.submit_button}
             </Button>
           </form>
         </Form>
       </CardContent>
       <div className="mt-4 text-center text-sm p-6 pt-0">
-        {t('login.signup_link_text')}{" "}
+        {t.signup_link_text}{" "}
         <Link href="/register" className="underline">
-          {t('login.signup_link')}
+          {t.signup_link}
         </Link>
       </div>
     </Card>

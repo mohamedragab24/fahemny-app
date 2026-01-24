@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { useI18n } from "@/locales/client";
+import ar from "@/locales/ar";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -39,7 +39,7 @@ const registerSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const t = useI18n();
+  const t = ar.register;
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -96,9 +96,9 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-headline">{t('register.title')}</CardTitle>
+        <CardTitle className="text-2xl font-headline">{t.title}</CardTitle>
         <CardDescription>
-          {t('register.description')}
+          {t.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -110,9 +110,9 @@ export default function RegisterPage() {
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register.first_name_label')}</FormLabel>
+                    <FormLabel>{t.first_name_label}</FormLabel>
                     <FormControl>
-                      <Input placeholder={t('register.first_name_placeholder')} {...field} />
+                      <Input placeholder={t.first_name_placeholder} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -123,9 +123,9 @@ export default function RegisterPage() {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register.last_name_label')}</FormLabel>
+                    <FormLabel>{t.last_name_label}</FormLabel>
                     <FormControl>
-                      <Input placeholder={t('register.last_name_placeholder')} {...field} />
+                      <Input placeholder={t.last_name_placeholder} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -137,11 +137,11 @@ export default function RegisterPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('register.email_label')}</FormLabel>
+                  <FormLabel>{t.email_label}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder={t('register.email_placeholder')}
+                      placeholder={t.email_placeholder}
                       {...field}
                     />
                   </FormControl>
@@ -154,7 +154,7 @@ export default function RegisterPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('register.password_label')}</FormLabel>
+                  <FormLabel>{t.password_label}</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} />
                   </FormControl>
@@ -167,7 +167,7 @@ export default function RegisterPage() {
               name="userType"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel>{t('register.user_type_label')}</FormLabel>
+                  <FormLabel>{t.user_type_label}</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                           <RadioGroupItem value="freelancer" id="r-freelancer" />
                         </FormControl>
                         <FormLabel htmlFor="r-freelancer" className="font-normal">
-                          {t('register.user_type_freelancer')}
+                          {t.user_type_freelancer}
                         </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2">
@@ -187,7 +187,7 @@ export default function RegisterPage() {
                           <RadioGroupItem value="employer" id="r-employer" />
                         </FormControl>
                         <FormLabel htmlFor="r-employer" className="font-normal">
-                          {t('register.user_type_employer')}
+                          {t.user_type_employer}
                         </FormLabel>
                       </FormItem>
                     </RadioGroup>
@@ -197,15 +197,15 @@ export default function RegisterPage() {
               )}
             />
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? t('register.submitting_button') : t('register.submit_button')}
+              {form.formState.isSubmitting ? t.submitting_button : t.submit_button}
             </Button>
           </form>
         </Form>
       </CardContent>
       <div className="mt-4 text-center text-sm p-6 pt-0">
-        {t('register.login_link_text')}{" "}
+        {t.login_link_text}{" "}
         <Link href="/login" className="underline">
-          {t('register.login_link')}
+          {t.login_link}
         </Link>
       </div>
     </Card>
