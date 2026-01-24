@@ -3,14 +3,27 @@
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { conversations, messages as initialMessages, Conversation } from "@/lib/data";
 import { Search, Send } from "lucide-react";
+import Link from "next/link";
+
+// The data types will be moved to a central place and imported
+type Conversation = {
+  id: string;
+  userName: string;
+  avatar: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+};
 
 export default function MessagesPage() {
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(conversations[0]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  // Static data is removed, so conversations will be an empty array
+  const conversations: Conversation[] = [];
 
   return (
     <div className="container mx-auto h-[calc(100vh-theme(spacing.24))] py-6">
@@ -24,7 +37,9 @@ export default function MessagesPage() {
             </div>
           </div>
           <div className="flex-grow overflow-auto">
-            {conversations.map((convo) => (
+            {conversations.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">No conversations.</div>
+            ) : conversations.map((convo) => (
               <div
                 key={convo.id}
                 onClick={() => setSelectedConversation(convo)}
@@ -56,36 +71,9 @@ export default function MessagesPage() {
         <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full">
           {selectedConversation ? (
             <>
-              <div className="p-4 border-b flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={selectedConversation.avatar} />
-                  <AvatarFallback>{selectedConversation.userName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">{selectedConversation.userName}</p>
-                  <p className="text-sm text-green-500">Online</p>
-                </div>
-              </div>
+              {/* Message details UI would go here, which is also deferred */}
               <div className="flex-grow overflow-auto p-6 space-y-4 bg-secondary/30">
-                {initialMessages.map((msg) => (
-                  <div key={msg.id} className={cn("flex items-end gap-2", msg.isSender ? "justify-end" : "justify-start")}>
-                     {!msg.isSender && <Avatar className="h-8 w-8"><AvatarImage src={selectedConversation.avatar} /><AvatarFallback>{selectedConversation.userName.charAt(0)}</AvatarFallback></Avatar>}
-                    <div
-                      className={cn(
-                        "rounded-lg px-4 py-2 max-w-sm",
-                        msg.isSender
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-card border"
-                      )}
-                    >
-                      <p>{msg.text}</p>
-                      <p className={cn("text-xs mt-1", msg.isSender ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
-                        {msg.timestamp}
-                      </p>
-                    </div>
-                     {msg.isSender && <Avatar className="h-8 w-8"><AvatarImage /><AvatarFallback>ME</AvatarFallback></Avatar>}
-                  </div>
-                ))}
+                 <div className="text-center text-muted-foreground">No messages.</div>
               </div>
               <div className="p-4 border-t bg-background">
                 <div className="relative">

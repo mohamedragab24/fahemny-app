@@ -1,0 +1,82 @@
+'use client';
+
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CheckCircle } from 'lucide-react';
+import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Project, UserProfile } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface ProjectCardProps {
+  project: Project;
+}
+
+function EmployerDetails({ employerId }: { employerId: string }) {
+  const firestore = useFirestore();
+  const employerRef = useMemoFirebase(
+    () => (employerId ? doc(firestore, 'userProfiles', employerId) : null),
+    [firestore, employerId]
+  );
+  const { data: employer, isLoading } = useDoc<UserProfile>(employerRef);
+
+  if (isLoading) {
+    return <Skeleton className="h-5 w-32 mt-2" />;
+  }
+
+  if (!employer) {
+    return <span className="text-sm text-muted-foreground">by an employer</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <span className="text-sm text-muted-foreground">
+        by {employer.firstName} {employer.lastName}
+      </span>
+      {/* Assuming all registered users are "verified" in a sense. The old model had a boolean. */}
+      <CheckCircle className="h-4 w-4 text-primary" />
+    </div>
+  );
+}
+
+export default function ProjectCard({ project }: ProjectCardProps) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader>
+        <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
+        <CardDescription>
+          <EmployerDetails employerId={project.employerId} />
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow">
+        <p className="text-muted-foreground line-clamp-3">
+          {project.description}
+        </p>
+        {project.tags && project.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {project.tags.map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between items-center">
+        <div className="font-bold text-primary">${project.budget}</div>
+        <Link href={`/projects/${project.id}`}>
+          <Button>View Project</Button>
+        </Link>
+      </CardFooter>
+    </Card>
+  );
+}

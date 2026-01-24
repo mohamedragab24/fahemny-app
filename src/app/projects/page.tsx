@@ -1,39 +1,48 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+'use client';
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { projects } from "@/lib/data";
-import { CheckCircle, Search } from "lucide-react";
-import Link from "next/link";
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
+import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Project } from '@/lib/types';
+import ProjectCard from '@/components/ProjectCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProjectsPage() {
+  const firestore = useFirestore();
+  const projectsRef = useMemoFirebase(
+    () => collection(firestore, 'projects'),
+    [firestore]
+  );
+  const { data: projects, isLoading } = useCollection<Project>(projectsRef);
+
   return (
     <div className="container mx-auto py-10">
       <div className="mb-10 text-center">
-        <h1 className="text-4xl font-bold font-headline">Find Your Next Project</h1>
+        <h1 className="text-4xl font-bold font-headline">
+          Find Your Next Project
+        </h1>
         <p className="text-muted-foreground mt-2">
-          Browse thousands of opportunities to find the perfect match for your skills.
+          Browse thousands of opportunities to find the perfect match for your
+          skills.
         </p>
       </div>
 
       <div className="mb-8 flex flex-col md:flex-row gap-4">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input placeholder="Search by keyword (e.g., 'React', 'UI/UX')" className="pl-10" />
+          <Input
+            placeholder="Search by keyword (e.g., 'React', 'UI/UX')"
+            className="pl-10"
+          />
         </div>
         <Select>
           <SelectTrigger className="w-full md:w-[180px]">
@@ -62,36 +71,28 @@ export default function ProjectsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <Card key={project.id} className="flex flex-col">
-            <CardHeader>
-              <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
-              <CardDescription>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground">by {project.employer.name}</span>
-                  {project.employer.verified && <CheckCircle className="h-4 w-4 text-primary" />}
-                </div>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-muted-foreground line-clamp-3">{project.description}</p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {project.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
+        {isLoading &&
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col space-y-3 p-4 border rounded-lg">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-12 w-full" />
+              <div className="flex justify-between items-center pt-4">
+                 <Skeleton className="h-8 w-1/4" />
+                 <Skeleton className="h-10 w-1/3" />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-              <div className="font-bold text-primary">${project.budget}</div>
-              <Link href={`/projects/${project.id}`}>
-                <Button>View Project</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ))}
+            </div>
+          ))}
+        {projects &&
+          projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
       </div>
+      {!isLoading && projects?.length === 0 && (
+        <div className="text-center text-muted-foreground col-span-full pt-10">
+          No projects found.
+        </div>
+      )}
     </div>
   );
 }

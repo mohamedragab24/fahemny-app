@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { projects } from "@/lib/data";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -34,18 +33,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {projects.slice(0, 2).map((project) => (
-                <div key={project.id} className="p-4 border rounded-lg flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">{project.title}</h3>
-                    <p className="text-sm text-muted-foreground">Status: In Progress</p>
-                  </div>
-                  <Link href={`/projects/${project.id}`}>
-                    <Button variant="outline">View Project</Button>
-                  </Link>
-                </div>
-              ))}
-               <div className="text-center text-muted-foreground pt-4">No more projects.</div>
+               <div className="text-center text-muted-foreground pt-4">No active projects. Data will be loaded from Firestore in the next step.</div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -58,18 +46,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-               {projects.slice(2, 4).map((project) => (
-                <div key={project.id} className="p-4 border rounded-lg flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">{project.title}</h3>
-                    <p className="text-sm text-muted-foreground">Status: Submitted</p>
-                  </div>
-                  <Link href={`/projects/${project.id}`}>
-                    <Button variant="outline">View Project</Button>
-                  </Link>
-                </div>
-              ))}
-              <div className="text-center text-muted-foreground pt-4">No more proposals.</div>
+              <div className="text-center text-muted-foreground pt-4">No submitted proposals. Data will be loaded from Firestore in the next step.</div>
             </CardContent>
           </Card>
         </TabsContent>
