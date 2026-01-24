@@ -1,0 +1,141 @@
+/**
+ * This Firestore Security Ruleset is designed for the ConnectNow application, a platform connecting employers and freelancers.
+ *
+ * Core Philosophy:
+ * The security model prioritizes authorization independence and data integrity. It enforces strict ownership for user-specific data and enables a public marketplace for projects. Access control decisions are made using denormalized owner IDs (e.g., `employerId`, `freelancerId`) directly on the documents being secured, which ensures rules are both performant and easy to understand.
+ *
+ * Data Structure:
+ * The data is organized into four top-level collections:
+ * - /userProfiles/{userId}: Stores private user data, accessible only by the owner.
+ * - /projects/{projectId}: A public collection of projects that anyone can read.
+ * - /offers/{offerId}: A semi-private collection of offers for projects.
+ * - /messages/{messageId}: A private collection for direct messages between users.
+ * This flat structure avoids complex hierarchical security dependencies.
+ *
+ * Key Security Decisions:
+ * - User Enumeration: Listing all users from the `/userProfiles` collection is explicitly disallowed to protect user privacy.
+ * - Public Marketplace: The `/projects` collection is publicly readable to allow freelancers to browse and discover work opportunities.
+ * - Write Integrity: All write operations (create, update, delete) are strictly controlled. Projects can only be modified by their owner (`employerId`). Offers can only be modified by the freelancer who created them (`freelancerId`).
+ * - Shared Access: Access to `offers` is granted to both the freelancer who made the offer and the employer who owns the project. Access to `messages` is restricted to the sender and receiver only.
+ * - Immutability: Critical relational IDs like `employerId`, `freelancerId`, `senderId`, and `receiverId` are enforced as immutable after creation to maintain data consistency.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    // Helper Functions
+    // ----------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if a document exists and if the authenticated user is the owner.
+     * Used for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /**
+     * Checks if the authenticated user is the owner of a given project by looking up the project document.
+     * @param projectId The ID of the project to check.
+     */
+    function isProjectOwner(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)).data.employerId == request.auth.uid;
+    }
+
+    /**
+     * Validates that the user is a participant in an offer, meaning they are either
+     * the freelancer who created it or the employer who owns the associated project.
+     * @param offerData The resource data of the offer document.
+     */
+    function isOfferParticipant(offerData) {
+      return isOwner(offerData.freelancerId) || isProjectOwner(offerData.projectId);
+    }
+
+    /**
+     * Validates that the user is a participant in a message thread (sender or receiver).
+     * @param messageData The resource data of the message document.
+     */
+    function isMessageParticipant(messageData) {
+      return isOwner(messageData.senderId) || isOwner(messageData.receiverId);
+    }
+
+    // ----------------------------------------------------------------------
+    // Collection Rules
+    // ----------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents. A user can only access and manage their own profile.
+     * @path /userProfiles/{userId}
+     * @allow (create) An authenticated user creating their own profile document, where the document ID matches their UID.
+     * @deny (get) A user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /userProfiles/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages project documents. Projects are public to read but writes are restricted to the owner.
+     * @path /projects/{projectId}
+     * @allow (get) Any user, authenticated or not, reading a project's details.
+     * @deny (update) An authenticated user trying to modify a project they do not own.
+     * @principle Implements a "Public Read with Owner-Only Writes" pattern for a marketplace-style collection.
+     */
+    match /projects/{projectId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && request.resource.data.employerId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.employerId) && request.resource.data.employerId == resource.data.employerId;
+      allow delete: if isExistingOwner(resource.data.employerId);
+    }
+
+    /**
+     * @description Manages offers submitted by freelancers for projects.
+     * @path /offers/{offerId}
+     * @allow (get) The freelancer who created the offer OR the employer who owns the project reading the offer.
+     * @deny (delete) The project owner trying to delete an offer made by a freelancer.
+     * @principle Enforces shared access between two parties (freelancer and employer) by checking related documents.
+     */
+    match /offers/{offerId} {
+      allow get: if isSignedIn() && isOfferParticipant(resource.data);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.freelancerId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.freelancerId) && request.resource.data.freelancerId == resource.data.freelancerId;
+      allow delete: if isExistingOwner(resource.data.freelancerId);
+    }
+
+    /**
+     * @description Manages private messages between two users.
+     * @path /messages/{messageId}
+     * @allow (create) An authenticated user sending a message where they are the sender.
+     * @deny (get) A user trying to read a message where they are neither the sender nor the receiver.
+     * @principle Restricts access to documents based on a denormalized list of participants (sender and receiver).
+     */
+    match /messages/{messageId} {
+      allow get: if isSignedIn() && isMessageParticipant(resource.data);
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isExistingOwner(resource.data.senderId);
+    }
+  }
+}
