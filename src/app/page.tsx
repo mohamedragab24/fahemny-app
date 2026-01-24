@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BrainCircuit, Wallet, Users } from "lucide-react";
+import { ArrowRight, BrainCircuit, Wallet, Users, Eye, Rocket } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ar from "@/locales/ar";
@@ -62,7 +62,31 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="features" className="w-full py-12 md:py-24 lg:py-32">
+      <section id="about" className="w-full py-12 md:py-24 lg:py-32">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+            <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">{t.about.heading}</div>
+          </div>
+          <div className="mx-auto grid max-w-5xl items-start gap-12 lg:grid-cols-2">
+            <div className="grid gap-4 text-center">
+              <div className="flex justify-center">
+                <Eye className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-2xl font-bold font-headline">{t.about.vision_title}</h3>
+              <p className="text-muted-foreground">{t.about.vision_description}</p>
+            </div>
+            <div className="grid gap-4 text-center">
+               <div className="flex justify-center">
+                <Rocket className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-2xl font-bold font-headline">{t.about.mission_title}</h3>
+              <p className="text-muted-foreground">{t.about.mission_description}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-secondary/50">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
@@ -84,7 +108,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="cta" className="w-full py-12 md:py-24 lg:py-32 bg-secondary/50">
+      <section id="cta" className="w-full py-12 md:py-24 lg:py-32">
         <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
           <div className="space-y-3">
             <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">
