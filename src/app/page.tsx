@@ -1,11 +1,49 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import type { UserProfile } from '@/lib/types';
+import { doc } from 'firebase/firestore';
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Lightbulb, Banknote, Users, Video, Star, ShieldCheck, MessageSquareX, History, CircleDollarSign } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ar from "@/locales/ar";
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default async function Home() {
+export default function Home() {
   const t = ar.home;
+  const router = useRouter();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    // Wait for user and profile data to be loaded
+    if (isUserLoading || isProfileLoading) {
+      return;
+    }
+
+    // If user is logged in, redirect based on role
+    if (user) {
+      if (userProfile?.role === 'student') {
+        router.replace('/requests/create');
+      } else if (userProfile?.role === 'tutor') {
+        router.replace('/requests/browse');
+      } else {
+        // If logged in but no role, go to role selection
+        router.replace('/select-role');
+      }
+    }
+    // If no user, do nothing and show the landing page
+  }, [user, userProfile, isUserLoading, isProfileLoading, router]);
 
   const howItWorksSteps = [
     { icon: <Lightbulb className="w-10 h-10 text-primary" />, text: t.how_it_works.steps[0] },
@@ -22,6 +60,26 @@ export default async function Home() {
     { icon: <CircleDollarSign className="w-10 h-10 text-primary" />, text: t.why_fahemny.features[3] },
   ];
 
+  // While checking auth/profile, show a loading skeleton to prevent landing page flash
+  if (isUserLoading || isProfileLoading || user) {
+     return (
+        <div className="flex flex-col min-h-screen bg-background">
+            <div className="container w-full pt-20 pb-12 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32">
+                 <Skeleton className="h-12 w-3/4 mb-4" />
+                 <Skeleton className="h-6 w-1/2 mb-8" />
+                 <div className="flex gap-4">
+                    <Skeleton className="h-11 w-48" />
+                    <Skeleton className="h-11 w-48" />
+                 </div>
+            </div>
+             <div className="w-full py-12 md:py-24 lg:py-32 container">
+                <Skeleton className="h-48 w-full" />
+             </div>
+        </div>
+     )
+  }
+
+  // Render the landing page for guests
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
