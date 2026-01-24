@@ -29,7 +29,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = getCurrentLocale();
+  const locale = await getCurrentLocale();
   const t = await getI18n();
 
   return (
