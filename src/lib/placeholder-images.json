@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "Abstract background for hero section",
+      "imageUrl": "https://images.unsplash.com/photo-1685316578159-b8b2e567b11c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMGNvbGxhYm9yYXRpb258ZW58MHx8fHwxNzY5MjY5NDI1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract collaboration"
+    },
+    {
+      "id": "employer-feature",
+      "description": "Image for employer feature section",
+      "imageUrl": "https://images.unsplash.com/photo-1554902843-260acd0993f8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwcm9mZXNzaW9uYWwlMjBtZWV0aW5nfGVufDB8fHx8MTc2OTI2OTQyNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "professional meeting"
+    },
+    {
+      "id": "freelancer-feature",
+      "description": "Image for freelancer feature section",
+      "imageUrl": "https://images.unsplash.com/photo-1769069919436-65462505fd25?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxmb2N1c2VkJTIwd29ya3xlbnwwfHx8fDE3NjkxOTA1MzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "focused work"
+    },
+    {
+      "id": "project-detail-image",
+      "description": "Image for project detail page",
+      "imageUrl": "https://images.unsplash.com/photo-1721244653693-1d13e68b66c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cHJvamVjdCUyMGJsdWVwcmludHxlbnwwfHx8fDE3NjkyNjk0MjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "project blueprint"
+    }
+  ]
 }
