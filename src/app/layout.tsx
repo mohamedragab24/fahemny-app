@@ -7,7 +7,7 @@ import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { I18nProviderClient } from "@/locales/client";
-import { getStaticParams } from "@/locales/server";
+import { getCurrentLocale } from "@/locales/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,22 +19,17 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-headline",
 });
 
-export function generateStaticParams() {
-  return getStaticParams();
-}
-
 export const metadata: Metadata = {
   title: "ConnectNow - Find Talent & Work",
   description: "A modern platform for connecting employers and freelancers.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-  params: { locale }
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string };
 }>) {
+  const locale = await getCurrentLocale();
   return (
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <body
