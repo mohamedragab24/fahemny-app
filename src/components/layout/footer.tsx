@@ -2,10 +2,15 @@
 import Link from 'next/link';
 import { Briefcase } from 'lucide-react';
 import { useI18n } from '@/locales/client';
+import React, { useState, useEffect } from 'react';
 
 export default function Footer() {
   const t = useI18n();
-  const currentYear = new Date().getFullYear();
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   return (
     <footer className="border-t">
@@ -21,7 +26,7 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-primary">{t('footer.terms')}</Link>
             <Link href="/privacy" className="hover:text-primary">{t('footer.privacy')}</Link>
           </nav>
-          <p className="text-sm text-muted-foreground">&copy; {currentYear} {t('header.title')}. {t('footer.rights')}</p>
+          {currentYear && <p className="text-sm text-muted-foreground">&copy; {currentYear} {t('header.title')}. {t('footer.rights')}</p>}
         </div>
       </div>
     </footer>

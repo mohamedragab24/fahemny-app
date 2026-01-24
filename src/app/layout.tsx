@@ -7,7 +7,7 @@ import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { I18nProviderClient } from "@/locales/client";
-import { getCurrentLocale } from "@/locales/server";
+import { headers } from "next/headers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,12 +24,13 @@ export const metadata: Metadata = {
   description: "A modern platform for connecting employers and freelancers.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getCurrentLocale();
+  const locale = headers().get('x-next-intl-locale') || 'en';
+
   return (
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <body
