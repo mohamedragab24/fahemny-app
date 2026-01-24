@@ -20,7 +20,7 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "FAHEMNY - فَهِّمْني",
-  description: "اطلب شرح لأي شيء، واحصل على مفهِّم فورًا.",
+  description: "فَهِّمْني – كل الفهم... من مكان واحد",
 };
 
 export default function RootLayout({
