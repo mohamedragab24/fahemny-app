@@ -25,17 +25,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import ar from "@/locales/ar";
 
 const registerSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  userType: z.enum(["freelancer", "employer"]),
+  name: z.string().min(2, "الاسم مطلوب"),
+  email: z.string().email("بريد إلكتروني غير صالح"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 });
 
 export default function RegisterPage() {
@@ -48,11 +45,9 @@ export default function RegisterPage() {
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      name: "",
       email: "",
       password: "",
-      userType: "freelancer",
     },
   });
 
@@ -67,15 +62,9 @@ export default function RegisterPage() {
 
       const userProfile = {
         id: user.uid,
-        firstName: values.firstName,
-        lastName: values.lastName,
+        name: values.name,
         email: values.email,
-        userType: values.userType,
-        photoURL: '',
-        isVerified: false,
-        isAdmin: true,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
 
       const userDocRef = doc(firestore, "userProfiles", user.uid);
@@ -83,20 +72,17 @@ export default function RegisterPage() {
 
       toast({
         title: "تم إنشاء الحساب!",
-        description: "تم تسجيلك بنجاح.",
+        description: "سيتم توجيهك لاختيار دورك.",
       });
 
-      if (values.userType === 'freelancer') {
-        router.push('/projects');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/select-role');
+
     } catch (error: any) {
       console.error("Registration failed:", error);
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error.message || "Could not create your account.",
+        title: "حدث خطأ!",
+        description: error.message || "لم نتمكن من إنشاء حسابك.",
       });
     }
   }
@@ -112,34 +98,19 @@ export default function RegisterPage() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.first_name_label}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.first_name_placeholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.last_name_label}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.last_name_placeholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.name_label}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t.name_placeholder} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
@@ -165,40 +136,6 @@ export default function RegisterPage() {
                   <FormLabel>{t.password_label}</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="userType"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel>{t.user_type_label}</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex gap-4"
-                    >
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="freelancer" id="r-freelancer" />
-                        </FormControl>
-                        <FormLabel htmlFor="r-freelancer" className="font-normal">
-                          {t.user_type_freelancer}
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                         <FormControl>
-                          <RadioGroupItem value="employer" id="r-employer" />
-                        </FormControl>
-                        <FormLabel htmlFor="r-employer" className="font-normal">
-                          {t.user_type_employer}
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

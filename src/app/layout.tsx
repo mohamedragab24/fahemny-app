@@ -19,8 +19,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "كونكت ناو - ابحث عن المواهب والعمل",
-  description: "منصة حديثة لربط أصحاب العمل والمستقلين.",
+  title: "FAHEMNY - فَهِّمْني",
+  description: "اطلب شرح لأي شيء، واحصل على مفهِّم فورًا.",
 };
 
 export default function RootLayout({

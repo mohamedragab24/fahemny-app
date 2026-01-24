@@ -28,8 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("بريد إلكتروني غير صالح"),
+  password: z.string().min(1, "كلمة المرور مطلوبة"),
 });
 
 export default function LoginPage() {
@@ -50,16 +50,16 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
-        title: "Logged In!",
-        description: "Welcome back.",
+        title: "تم تسجيل الدخول!",
+        description: "أهلاً بعودتك.",
       });
-      router.push("/dashboard");
+      router.push("/");
     } catch (error: any) {
       console.error("Login failed:", error);
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error.message || "Could not log you in.",
+        title: "حدث خطأ!",
+        description: error.message || "فشل تسجيل الدخول.",
       });
     }
   }

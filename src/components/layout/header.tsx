@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
-  Briefcase,
+  BrainCircuit,
   Menu,
   MessageSquare,
   User,
   LogOut,
   ShieldCheck,
   LifeBuoy,
+  Wallet,
+  PlusCircle,
+  LayoutGrid
 } from "lucide-react";
 import {
   Sheet,
@@ -54,21 +57,23 @@ export default function Header({ translations: t }: { translations: Translations
   };
 
   const navLinks = [
-    { href: "/projects", label: t.links.projects },
-    { href: "/dashboard", label: t.links.dashboard },
-    { href: "/messages", label: t.links.messages },
+    { href: "/requests/browse", label: t.links.browse_requests },
+    { href: "/requests/create", label: t.links.create_request },
+    { href: "/sessions", label: t.links.my_sessions },
+    { href: "/wallet", label: t.links.wallet },
     { href: "/support", label: t.links.support },
   ];
   
   const mobileNavLinks = [
-      { href: "/projects", label: t.links.projects, icon: <Briefcase className="h-5 w-5" /> },
-      { href: "/dashboard", label: t.links.dashboard, icon: <User className="h-5 w-5" /> },
-      { href: "/messages", label: t.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
+      { href: "/requests/browse", label: t.links.browse_requests, icon: <LayoutGrid className="h-5 w-5" /> },
+      { href: "/requests/create", label: t.links.create_request, icon: <PlusCircle className="h-5 w-5" /> },
+      { href: "/sessions", label: t.links.my_sessions, icon: <BrainCircuit className="h-5 w-5" /> },
+      { href: "/wallet", label: t.links.wallet, icon: <Wallet className="h-5 w-5" /> },
       { href: "/support", label: t.links.support, icon: <LifeBuoy className="h-5 w-5" /> },
   ];
 
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || user?.email?.[0].toUpperCase();
+  const getInitials = (name?: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || user?.email?.[0].toUpperCase();
   }
 
   return (
@@ -76,7 +81,7 @@ export default function Header({ translations: t }: { translations: Translations
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex items-center">
           <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
-            <Briefcase className="h-6 w-6 text-primary" />
+            <BrainCircuit className="h-6 w-6 text-primary" />
             <span>{t.title}</span>
           </Link>
         </div>
@@ -99,24 +104,28 @@ export default function Header({ translations: t }: { translations: Translations
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile.photoURL || undefined} alt={`${userProfile.firstName} ${userProfile.lastName}`} />
-                    <AvatarFallback>{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
+                    <AvatarImage src={userProfile.photoURL || undefined} alt={userProfile.name} />
+                    <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userProfile.firstName} {userProfile.lastName}</p>
+                    <p className="text-sm font-medium leading-none">{userProfile.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>{t.userMenu.dashboard}</span>
+                    <span>{t.userMenu.profile}</span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => router.push('/sessions')}>
+                    <BrainCircuit className="mr-2 h-4 w-4" />
+                    <span>{t.links.my_sessions}</span>
                 </DropdownMenuItem>
                 {userProfile.isAdmin && (
                   <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
@@ -149,11 +158,11 @@ export default function Header({ translations: t }: { translations: Translations
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-              <SheetTitle className="sr-only">{t.mobile.toggle}</SheetTitle>
+               <SheetTitle className="sr-only">{t.mobile.title}</SheetTitle>
               <div className="flex flex-col h-full">
                 <div className="border-b pb-4">
                   <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
-                    <Briefcase className="h-6 w-6 text-primary" />
+                    <BrainCircuit className="h-6 w-6 text-primary" />
                     <span>{t.title}</span>
                   </Link>
                 </div>

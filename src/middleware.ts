@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// No i18n middleware needed as the app is Arabic-only.
 export function middleware(request: NextRequest) {
   return NextResponse.next();
 }

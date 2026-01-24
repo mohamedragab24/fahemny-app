@@ -1,24 +1,3 @@
-/**
- * This Firestore Security Ruleset is designed for the ConnectNow application, a platform connecting employers and freelancers.
- *
- * Core Philosophy:
- * The security model prioritizes authorization independence and data integrity. It enforces strict ownership for user-specific data and enables a public marketplace for projects. Access control decisions are made using denormalized owner IDs (e.g., `employerId`, `freelancerId`) directly on the documents being secured, which ensures rules are both performant and easy to understand.
- *
- * Data Structure:
- * The data is organized into four top-level collections:
- * - /userProfiles/{userId}: Stores private user data, accessible only by the owner.
- * - /projects/{projectId}: A public collection of projects that anyone can read.
- * - /offers/{offerId}: A semi-private collection of offers for projects.
- * - /messages/{messageId}: A private collection for direct messages between users.
- * This flat structure avoids complex hierarchical security dependencies.
- *
- * Key Security Decisions:
- * - User Enumeration: Listing all users from the `/userProfiles` collection is explicitly disallowed to protect user privacy, except for admins.
- * - Public Marketplace: The `/projects` collection is publicly readable to allow freelancers to browse and discover work opportunities.
- * - Write Integrity: All write operations (create, update, delete) are strictly controlled. Projects can only be modified by their owner (`employerId`) or an admin.
- * - Shared Access: Access to `offers` is granted to both the freelancer who made the offer and the employer who owns the project. Access to `messages` is restricted to the sender and receiver only.
- * - Immutability: Critical relational IDs like `employerId`, `freelancerId`, `senderId`, and `receiverId` are enforced as immutable after creation to maintain data consistency.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -27,65 +6,24 @@ service cloud.firestore {
     // Helper Functions
     // ----------------------------------------------------------------------
 
-    /**
-     * Checks if a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Checks if a document exists and if the authenticated user is the owner.
-     * Used for safe update and delete operations.
-     */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-    
-    /**
-     * Checks if the current user is an admin.
-     * This function is robust against missing documents or fields.
-     */
-    function isAdmin() {
-      // Use `exists` for robustness against non-existent documents.
-      // Use `get` only when you need the document data, and `exists` when you only need to check for presence.
-      // Here we need data, so `get` is appropriate, but we must check for null on the result.
-      let userProfile = get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
-      return isSignedIn() && userProfile != null && 'isAdmin' in userProfile.data && userProfile.data.isAdmin == true;
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/userProfiles/$(userId)).data.role;
     }
 
-    /**
-     * Checks if the authenticated user is the owner of a given project by looking up the project document.
-     * @param projectId The ID of the project to check.
-     */
-    function isProjectOwner(projectId) {
-      let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
-      return projectData != null && projectData.employerId == request.auth.uid;
+    function isStudent(userId) {
+      return getUserRole(userId) == 'student';
     }
 
-    /**
-     * Validates that the user is a participant in an offer, meaning they are either
-     * the freelancer who created it or the employer who owns the associated project.
-     * @param offerData The resource data of the offer document.
-     */
-    function isOfferParticipant(offerData) {
-      return offerData != null && (isOwner(offerData.freelancerId) || isProjectOwner(offerData.projectId));
-    }
-
-
-    /**
-     * Validates that the user is a participant in a message thread (sender or receiver).
-     * @param messageData The resource data of the message document.
-     */
-    function isMessageParticipant(messageData) {
-      return isOwner(messageData.senderId) || isOwner(messageData.receiverId);
+    function isTutor(userId) {
+      return getUserRole(userId) == 'tutor';
     }
 
     // ----------------------------------------------------------------------
@@ -93,50 +31,42 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * @description Manages user profile documents. A user can only access and manage their own profile. Admins have full access.
+     * @description Manages user profiles. Users can read any profile, but only edit their own.
      */
     match /userProfiles/{userId} {
       allow get: if true;
-      allow list: if isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isOwner(userId) || isAdmin();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Users should not be able to delete their profiles directly.
     }
 
     /**
-     * @description Manages project documents. Projects are public to read but writes are restricted to the owner or admins.
+     * @description Manages session requests.
+     * Students can create requests.
+     * Tutors can view all open requests.
+     * Only the creating student or the assigned tutor can view an accepted request.
      */
-    match /projects/{projectId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn() && request.resource.data.employerId == request.auth.uid;
-      allow update: if (isExistingOwner(resource.data.employerId) && request.resource.data.employerId == resource.data.employerId) || isAdmin();
-      allow delete: if isExistingOwner(resource.data.employerId) || isAdmin();
-    }
-
-    /**
-     * @description Manages offers submitted by freelancers for projects.
-     */
-    match /offers/{offerId} {
-      allow get: if isSignedIn() && (isOfferParticipant(resource.data) || isAdmin());
-      allow list: if isSignedIn(); // Allows any signed-in user to potentially list offers, but queries should be secured on the client.
-      allow create: if isSignedIn() && request.resource.data.freelancerId == request.auth.uid;
-      allow update: if ( (isOwner(resource.data.freelancerId) || isProjectOwner(resource.data.projectId)) &&
-                       request.resource.data.freelancerId == resource.data.freelancerId &&
-                       request.resource.data.projectId == resource.data.projectId
-                     ) || isAdmin();
-      allow delete: if isExistingOwner(resource.data.freelancerId) || isAdmin();
-    }
-
-    /**
-     * @description Manages private messages between two users. Admins do not have access for privacy.
-     */
-    match /messages/{messageId} {
-      allow get: if isSignedIn() && isMessageParticipant(resource.data);
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update: if false;
-      allow delete: if isExistingOwner(resource.data.senderId);
+    match /sessionRequests/{requestId} {
+      allow get: if isSignedIn() && 
+                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId));
+      allow list: if isSignedIn() && isTutor(request.auth.uid);
+      
+      // A student can create a request for themselves.
+      allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
+      
+      // An update can be performed by:
+      // 1. A tutor accepting the request (setting tutorId and meetingLink).
+      // 2. The student who created it, to cancel it if it's still open.
+      // 3. Either participant to mark it as complete.
+      allow update: if isSignedIn() && (
+        (isTutor(request.auth.uid) && resource.data.tutorId == null) || // Tutor accepting
+        (isOwner(resource.data.studentId) && resource.data.status == 'open') || // Student cancelling
+        (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) // Student/Tutor updating status post-session
+      );
+      
+      // Only the student can delete their request, and only if it's still open.
+      allow delete: if isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open';
     }
   }
 }

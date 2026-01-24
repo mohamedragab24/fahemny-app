@@ -1,46 +1,27 @@
 export type UserProfile = {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  userType: 'employer' | 'freelancer';
+  role?: 'student' | 'tutor';
   photoURL?: string;
+  rating?: number;
   isVerified?: boolean;
   isAdmin?: boolean;
   createdAt: string;
-  updatedAt: string;
 };
 
-export type Project = {
+export type SessionRequest = {
   id: string;
-  employerId: string;
+  studentId: string;
+  tutorId?: string;
   title: string;
+  field: string;
   description: string;
-  category: string;
-  budget: number;
-  deadline: string;
-  status: 'open' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
-  tags?: string[];
-  imageUrl?: string;
+  price: number;
+  sessionDate: string;
+  sessionTime: string;
+  tutorGender: 'male' | 'female' | 'any';
+  status: 'open' | 'accepted' | 'completed' | 'cancelled';
+  meetingLink?: string;
   createdAt: string;
-  updatedAt: string;
-};
-
-export type Offer = {
-  id: string;
-  projectId: string;
-  freelancerId: string;
-  description: string;
-  rate: number;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Message = {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  timestamp: string; // ISO string
 };

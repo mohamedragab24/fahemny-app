@@ -4,221 +4,125 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user profile in the ConnectNow application.",
+      "description": "Represents a user profile in the FAHEMNY application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user profile.",
-          "format": "uuid"
+          "description": "Unique identifier for the user profile, matches Firebase Auth UID."
         },
-        "firstName": {
+        "name": {
           "type": "string",
-          "description": "First name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Last name of the user."
+          "description": "Full name of the user."
         },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
         },
-        "userType": {
+        "role": {
           "type": "string",
-          "description": "Type of user (e.g., employer, freelancer)."
+          "description": "The role of the user.",
+          "enum": ["student", "tutor"]
+        },
+        "rating": {
+          "type": "number",
+          "description": "The user's average rating, from 1 to 5."
         },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",
           "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user profile was last updated.",
-          "format": "date-time"
         }
       },
       "required": [
         "id",
-        "firstName",
-        "lastName",
+        "name",
         "email",
-        "userType",
-        "createdAt",
-        "updatedAt"
+        "createdAt"
       ]
     },
-    "Project": {
+    "SessionRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Project",
+      "title": "SessionRequest",
       "type": "object",
-      "description": "Represents a project posted by an employer.",
+      "description": "Represents a request for an explanation session posted by a student.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the project.",
-          "format": "uuid"
+          "description": "Unique identifier for the session request."
         },
-        "employerId": {
+        "studentId": {
           "type": "string",
-          "description": "Reference to the UserProfile who created the project. (Relationship: UserProfile 1:N Project)"
+          "description": "The ID of the student (UserProfile) who created the request."
+        },
+        "tutorId": {
+          "type": "string",
+          "description": "The ID of the tutor (UserProfile) who accepted the request."
         },
         "title": {
           "type": "string",
-          "description": "Title of the project."
+          "description": "Title of the session request."
+        },
+        "field": {
+          "type": "string",
+          "description": "The academic or professional field of the request (e.g., Physics, Programming)."
         },
         "description": {
           "type": "string",
-          "description": "Detailed description of the project requirements."
+          "description": "Detailed description of what the student needs to understand."
         },
-        "category": {
-          "type": "string",
-          "description": "The category of the project."
-        },
-        "budget": {
+        "price": {
           "type": "number",
-          "description": "Budget allocated for the project."
+          "description": "The price offered by the student for the session."
         },
-        "deadline": {
+        "sessionDate": {
           "type": "string",
-          "description": "مدة التسليم للمشروع."
+          "description": "The proposed date for the session.",
+          "format": "date"
+        },
+        "sessionTime": {
+          "type": "string",
+          "description": "The proposed time for the session.",
+          "format": "time"
+        },
+        "tutorGender": {
+          "type": "string",
+          "description": "The preferred gender of the tutor.",
+          "enum": ["male", "female", "any"]
         },
         "status": {
           "type": "string",
-          "description": "Current status of the project (e.g., open, pending_approval, in_progress, completed, rejected)."
+          "description": "Current status of the request.",
+          "enum": ["open", "accepted", "completed", "cancelled"]
         },
-        "tags": {
-          "type": "array",
-          "description": "Skills or tags related to the project.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL of an image for the project.",
-          "format": "uri"
+        "meetingLink": {
+            "type": "string",
+            "description": "The Zoom/Meet link for the session, provided by the tutor.",
+            "format": "uri"
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when the project was posted.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the project was last updated.",
+          "description": "Timestamp indicating when the request was posted.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "employerId",
+        "studentId",
         "title",
+        "field",
         "description",
-        "category",
-        "budget",
-        "deadline",
+        "price",
+        "sessionDate",
+        "sessionTime",
         "status",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Offer": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Offer",
-      "type": "object",
-      "description": "Represents an offer submitted by a freelancer for a project.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the offer.",
-          "format": "uuid"
-        },
-        "projectId": {
-          "type": "string",
-          "description": "Reference to the Project the offer is for. (Relationship: Project 1:N Offer)"
-        },
-        "freelancerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who submitted the offer. (Relationship: UserProfile 1:N Offer)"
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the offer, including the freelancer's proposed approach and skills."
-        },
-        "rate": {
-          "type": "number",
-          "description": "Proposed rate for the project."
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the offer (e.g., pending, accepted, rejected)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the offer was submitted.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the offer was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "projectId",
-        "freelancerId",
-        "description",
-        "rate",
-        "status",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Message": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Message",
-      "type": "object",
-      "description": "Represents a message exchanged between users.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the message.",
-          "format": "uuid"
-        },
-        "senderId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who sent the message."
-        },
-        "receiverId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who received the message."
-        },
-        "content": {
-          "type": "string",
-          "description": "Content of the message."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp indicating when the message was sent.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "senderId",
-        "receiverId",
-        "content",
-        "timestamp"
+        "createdAt"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -230,64 +134,20 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information.  Uses path-based ownership for security. Includes userId as a parameter",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "description": "Stores user profile information."
         }
       },
       {
-        "path": "/projects/{projectId}",
+        "path": "/sessionRequests/{requestId}",
         "definition": {
-          "entityName": "Project",
+          "entityName": "SessionRequest",
           "schema": {
-            "$ref": "#/backend/entities/Project"
+            "$ref": "#/backend/entities/SessionRequest"
           },
-          "description": "Stores project information. Includes denormalized 'employerId' for authorization independence. Uses projectId as a parameter",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The unique identifier for the project."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/offers/{offerId}",
-        "definition": {
-          "entityName": "Offer",
-          "schema": {
-            "$ref": "#/backend/entities/Offer"
-          },
-          "description": "Stores offer information. Offers are owned by freelancers to the projects they applied. Uses offerId as a parameter",
-          "params": [
-            {
-              "name": "offerId",
-              "description": "The unique identifier for the offer."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores message information. Each message contains senderId and receiverId.",
-          "params": [
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the message."
-            }
-          ]
+          "description": "Stores all session requests created by students."
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the ConnectNow application. User profiles, projects, offers, and messages are stored in separate collections with clear ownership and access control mechanisms. \n\n*   **Authorization Independence:** To avoid hierarchical dependencies and enable atomic operations, the `employerId` is denormalized into the `projects` collection. This allows direct access to project documents without needing to fetch parent user profile data. For offers, the `projectId` and `freelancerId` are used to establish direct ownership without `get()` calls. The `Message` structure does not include any authorization concern.\n*   **Structural Segregation:** Different data types with varying access requirements are stored in separate collections (`userProfiles`, `projects`, `offers`, `messages`). This simplifies security rules by ensuring that all documents within a collection share the same security posture.\n*   **Access Modeling:** User profiles are stored in the `userProfiles` collection. Projects are owned by employers and stored in the `projects` collection, leveraging the `employerId` field for ownership. Offers are associated with both projects and freelancers, using `projectId` and `freelancerId` for access control. Messages are stored in the `messages` collection. Message access is controlled via direct user-to-user relationship.\n*   **QAPs (Rules Are Not Filters):** The structure supports secure `list` operations by segregating data based on ownership. Listing projects requires checking the `employerId`, ensuring that only authorized employers can access their projects. Similarly, listing offers requires checking either the `projectId` or `freelancerId`.\n*   **Invariants:** The structure supports data integrity by explicitly defining ownership using `employerId` for projects and `freelancerId` for offers. Timestamps (`createdAt`, `updatedAt`) are included in all entities to track data changes.\n"
+    "reasoning": "The Firestore structure is simplified for the FAHEMNY app. It consists of two main collections: `userProfiles` for storing user data including their role (student or tutor), and `sessionRequests` for all tutoring requests. This flat structure is efficient for querying. `sessionRequests` can be queried by tutors, and students can view their own requests. Security rules will manage access based on user roles and ownership."
   }
 }
