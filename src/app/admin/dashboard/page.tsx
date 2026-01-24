@@ -1,6 +1,6 @@
 "use client";
 
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useDoc, useUser } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import type { UserProfile, Project } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -250,6 +250,39 @@ function PendingProjectsTable() {
 
 export default function AdminDashboardPage() {
   const t = ar.admin;
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  if (isUserLoading || isProfileLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <Skeleton className="h-screen w-full" />
+      </div>
+    );
+  }
+
+  if (!userProfile?.isAdmin) {
+    return (
+      <div className="container mx-auto py-10 flex items-center justify-center min-h-[60vh]">
+        <Card className="w-full max-w-md text-center">
+            <CardHeader>
+                <div className="mx-auto bg-destructive/10 p-3 rounded-full w-fit">
+                    <ShieldAlert className="h-8 w-8 text-destructive" />
+                </div>
+                <CardTitle className="mt-4">{t.layout_title}</CardTitle>
+                <CardDescription>{t.layout_description}</CardDescription>
+            </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10 space-y-10">
       <div>

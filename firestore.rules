@@ -96,7 +96,7 @@ service cloud.firestore {
      * @description Manages user profile documents. A user can only access and manage their own profile. Admins have full access.
      */
     match /userProfiles/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if true;
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) || isAdmin();
