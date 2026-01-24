@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Languages } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Skeleton } from './ui/skeleton';
 
-export default function LanguageSwitcher() {
+function LanguageSwitcherContent() {
   const changeLocale = useChangeLocale();
   const locale = useCurrentLocale();
   const t = useI18n();
@@ -33,4 +35,19 @@ export default function LanguageSwitcher() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+
+export default function LanguageSwitcher() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <Skeleton className="w-9 h-9 rounded-full" />;
+    }
+
+    return <LanguageSwitcherContent />;
 }
