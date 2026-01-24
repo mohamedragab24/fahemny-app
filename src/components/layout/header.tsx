@@ -42,7 +42,6 @@ const LanguageSwitcher = dynamic(() => import('../LanguageSwitcher'), {
 });
 
 export default function Header({ translations }: { translations: Translations }) {
-  const { header: t, language_switcher: t_lang } = translations;
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -53,15 +52,15 @@ export default function Header({ translations }: { translations: Translations })
   };
 
   const navLinks = [
-    { href: "/projects", label: t.links.projects },
-    { href: "/dashboard", label: t.links.dashboard },
-    { href: "/messages", label: t.links.messages },
+    { href: "/projects", label: translations.header.links.projects },
+    { href: "/dashboard", label: translations.header.links.dashboard },
+    { href: "/messages", label: translations.header.links.messages },
   ];
   
   const mobileNavLinks = [
-      { href: "/projects", label: t.links.projects, icon: <Briefcase className="h-5 w-5" /> },
-      { href: "/dashboard", label: t.links.dashboard, icon: <User className="h-5 w-5" /> },
-      { href: "/messages", label: t.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
+      { href: "/projects", label: translations.header.links.projects, icon: <Briefcase className="h-5 w-5" /> },
+      { href: "/dashboard", label: translations.header.links.dashboard, icon: <User className="h-5 w-5" /> },
+      { href: "/messages", label: translations.header.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
   ];
 
   return (
@@ -70,7 +69,7 @@ export default function Header({ translations }: { translations: Translations })
         <div className="mr-4 flex items-center">
           <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span>{t.title}</span>
+            <span>{translations.header.title}</span>
           </Link>
         </div>
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
@@ -85,7 +84,7 @@ export default function Header({ translations }: { translations: Translations })
           ))}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
-           <LanguageSwitcher translations={t_lang} />
+           <LanguageSwitcher translations={translations.language_switcher} />
           {isUserLoading ? (
             <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
           ) : user ? (
@@ -110,22 +109,22 @@ export default function Header({ translations }: { translations: Translations })
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/dashboard')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>{t.userMenu.dashboard}</span>
+                    <span>{translations.header.userMenu.dashboard}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t.auth.logout}</span>
+                  <span>{translations.header.auth.logout}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="hidden md:flex items-center space-x-2">
               <Link href="/login">
-                <Button variant="ghost">{t.auth.login}</Button>
+                <Button variant="ghost">{translations.header.auth.login}</Button>
               </Link>
               <Link href="/register">
-                <Button>{t.auth.signup}</Button>
+                <Button>{translations.header.auth.signup}</Button>
               </Link>
             </div>
           )}
@@ -133,7 +132,7 @@ export default function Header({ translations }: { translations: Translations })
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">{t.mobile.toggle}</span>
+                <span className="sr-only">{translations.header.mobile.toggle}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
@@ -141,7 +140,7 @@ export default function Header({ translations }: { translations: Translations })
                 <div className="border-b pb-4">
                   <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
                     <Briefcase className="h-6 w-6 text-primary" />
-                    <span>{t.title}</span>
+                    <span>{translations.header.title}</span>
                   </Link>
                 </div>
                 <nav className="flex-grow mt-6">
@@ -160,17 +159,17 @@ export default function Header({ translations }: { translations: Translations })
                 </nav>
                 <div className="mt-auto border-t pt-4">
                   {user ? (
-                      <Button onClick={handleSignOut} className="w-full">{t.auth.logout}</Button>
+                      <Button onClick={handleSignOut} className="w-full">{translations.header.auth.logout}</Button>
                   ) : (
                     <div className="flex flex-col space-y-2">
                         <SheetClose asChild>
                             <Link href="/login">
-                                <Button variant="ghost" className="w-full">{t.auth.login}</Button>
+                                <Button variant="ghost" className="w-full">{translations.header.auth.login}</Button>
                             </Link>
                         </SheetClose>
                         <SheetClose asChild>
                             <Link href="/register">
-                                <Button className="w-full">{t.auth.signup}</Button>
+                                <Button className="w-full">{translations.header.auth.signup}</Button>
                             </Link>
                         </SheetClose>
                     </div>
