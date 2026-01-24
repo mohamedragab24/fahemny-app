@@ -16,10 +16,12 @@ export type Project = {
   employerId: string;
   title: string;
   description: string;
+  category: string;
   budget: number;
   deadline: string;
   status: string;
   tags?: string[];
+  imageUrl?: string;
   proposals?: number;
   createdAt: string;
   updatedAt: string;

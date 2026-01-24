@@ -266,8 +266,8 @@ export default function ProjectDetailsPage({
     () => doc(firestore, 'projects', params.id),
     [firestore, params.id]
   );
-  const { data: project, isLoading, error } = useDoc<Project>(projectRef);
-  const projectImage = PlaceHolderImages.find(
+  const { data: project, isLoading } = useDoc<Project>(projectRef);
+  const projectImagePlaceholder = PlaceHolderImages.find(
     (p) => p.id === 'project-detail-image'
   );
 
@@ -282,6 +282,8 @@ export default function ProjectDetailsPage({
   if (!project) {
     notFound();
   }
+  
+  const imageUrl = project.imageUrl || projectImagePlaceholder?.imageUrl;
 
   return (
     <div className="container mx-auto py-10">
@@ -308,14 +310,14 @@ export default function ProjectDetailsPage({
               </div>
             </CardHeader>
             <CardContent>
-              {projectImage && (
+              {imageUrl && (
                 <div className="mb-6">
                   <Image
-                    src={projectImage.imageUrl}
+                    src={imageUrl}
                     width={800}
                     height={400}
                     alt={project.title}
-                    data-ai-hint={projectImage.imageHint}
+                    data-ai-hint={!project.imageUrl ? projectImagePlaceholder?.imageHint : 'project image'}
                     className="rounded-lg object-cover w-full aspect-video"
                   />
                 </div>

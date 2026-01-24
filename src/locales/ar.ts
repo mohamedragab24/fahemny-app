@@ -127,6 +127,8 @@ export default {
     deadline_placeholder: 'اختر تاريخًا',
     tags_label: 'المهارات / الوسوم (مفصولة بفاصلة)',
     tags_placeholder: "مثال: 'React, Node.js, Figma'",
+    image_url_label: 'رابط صورة المشروع (اختياري)',
+    image_url_placeholder: 'https://example.com/image.png',
     submit_button: 'انشر المشروع',
     submitting_button: 'جار النشر...',
   },
