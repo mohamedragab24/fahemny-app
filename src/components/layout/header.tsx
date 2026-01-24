@@ -29,12 +29,19 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useI18n } from "@/locales/client";
+import { useEffect, useState } from "react";
+import { Skeleton } from "../ui/skeleton";
 
 export default function Header() {
   const t = useI18n();
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -74,7 +81,7 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
-           <LanguageSwitcher />
+           {mounted ? <LanguageSwitcher /> : <Skeleton className="w-9 h-9 rounded-full" />}
           {isUserLoading ? (
             <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
           ) : user ? (
