@@ -7,6 +7,7 @@ import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { I18nProviderClient } from "@/locales/client";
+import { getI18n } from "@/locales/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,12 +24,13 @@ export const metadata: Metadata = {
   description: "منصة حديثة لربط أصحاب العمل والمستقلين.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const locale = 'ar';
+  const t = await getI18n();
 
   return (
     <html lang={locale} dir="rtl">
@@ -42,9 +44,9 @@ export default function RootLayout({
         <I18nProviderClient locale={locale}>
           <FirebaseClientProvider>
             <div className="flex flex-col min-h-screen">
-              <Header />
+              <Header translations={t.header} />
               <main className="flex-grow">{children}</main>
-              <Footer />
+              <Footer translations={t.footer} />
             </div>
             <Toaster />
           </FirebaseClientProvider>
