@@ -7,7 +7,6 @@ import Footer from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { I18nProviderClient } from "@/locales/client";
-import { getI18n, getCurrentLocale } from "@/locales/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,20 +19,19 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "ConnectNow - Find Talent & Work",
-  description: "A modern platform for connecting employers and freelancers.",
+  title: "كونكت ناو - ابحث عن المواهب والعمل",
+  description: "منصة حديثة لربط أصحاب العمل والمستقلين.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getCurrentLocale();
-  const t = await getI18n();
+  const locale = 'ar';
 
   return (
-    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <html lang={locale} dir="rtl">
       <body
         className={cn(
           "relative h-full font-sans antialiased",
@@ -44,15 +42,9 @@ export default async function RootLayout({
         <I18nProviderClient locale={locale}>
           <FirebaseClientProvider>
             <div className="flex flex-col min-h-screen">
-              <Header translations={{
-                header: t('header'),
-                language_switcher: t('language_switcher')
-              }} />
+              <Header />
               <main className="flex-grow">{children}</main>
-              <Footer translations={{
-                header: t('header'),
-                footer: t('footer'),
-              }} />
+              <Footer />
             </div>
             <Toaster />
           </FirebaseClientProvider>
