@@ -51,9 +51,11 @@ service cloud.firestore {
     
     /**
      * Checks if the current user is an admin.
+     * This function is robust against missing documents or fields.
      */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true;
+      let userProfile = get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
+      return isSignedIn() && userProfile != null && 'isAdmin' in userProfile.data && userProfile.data.isAdmin == true;
     }
 
     /**
