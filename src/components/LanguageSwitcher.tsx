@@ -1,6 +1,6 @@
 'use client';
 
-import { useChangeLocale, useCurrentLocale, useI18n } from '@/locales/client';
+import { useChangeLocale, useCurrentLocale } from '@/locales/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,26 +9,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Languages } from 'lucide-react';
+import type en from '@/locales/en';
 
-export default function LanguageSwitcher() {
+type Translations = typeof en.language_switcher;
+
+export default function LanguageSwitcher({ translations: t }: { translations: Translations}) {
   const changeLocale = useChangeLocale();
   const locale = useCurrentLocale();
-  const t = useI18n();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
           <Languages className="h-5 w-5" />
-          <span className="sr-only">{t('language_switcher.change_language')}</span>
+          <span className="sr-only">{t.change_language}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => changeLocale('en')} disabled={locale === 'en'}>
-          {t('language_switcher.en')}
+          {t.en}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeLocale('ar')} disabled={locale === 'ar'}>
-          {t('language_switcher.ar')}
+          {t.ar}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

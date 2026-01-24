@@ -27,17 +27,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useI18n } from "@/locales/client";
 import { Skeleton } from "../ui/skeleton";
 import dynamic from 'next/dynamic';
+import type en from '@/locales/en';
+
+type Translations = {
+  header: typeof en.header,
+  language_switcher: typeof en.language_switcher
+}
 
 const LanguageSwitcher = dynamic(() => import('../LanguageSwitcher'), {
   ssr: false,
   loading: () => <Skeleton className="w-9 h-9 rounded-full" />,
 });
 
-export default function Header() {
-  const t = useI18n();
+export default function Header({ translations }: { translations: Translations }) {
+  const { header: t, language_switcher: t_lang } = translations;
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -48,15 +53,15 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: "/projects", label: t('header.links.projects') },
-    { href: "/dashboard", label: t('header.links.dashboard') },
-    { href: "/messages", label: t('header.links.messages') },
+    { href: "/projects", label: t.links.projects },
+    { href: "/dashboard", label: t.links.dashboard },
+    { href: "/messages", label: t.links.messages },
   ];
   
   const mobileNavLinks = [
-      { href: "/projects", label: t('header.links.projects'), icon: <Briefcase className="h-5 w-5" /> },
-      { href: "/dashboard", label: t('header.links.dashboard'), icon: <User className="h-5 w-5" /> },
-      { href: "/messages", label: t('header.links.messages'), icon: <MessageSquare className="h-5 w-5" /> },
+      { href: "/projects", label: t.links.projects, icon: <Briefcase className="h-5 w-5" /> },
+      { href: "/dashboard", label: t.links.dashboard, icon: <User className="h-5 w-5" /> },
+      { href: "/messages", label: t.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
   ];
 
   return (
@@ -65,7 +70,7 @@ export default function Header() {
         <div className="mr-4 flex items-center">
           <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span>{t('header.title')}</span>
+            <span>{t.title}</span>
           </Link>
         </div>
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
@@ -80,7 +85,7 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
-           <LanguageSwitcher />
+           <LanguageSwitcher translations={t_lang} />
           {isUserLoading ? (
             <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
           ) : user ? (
@@ -105,22 +110,22 @@ export default function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/dashboard')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>{t('header.userMenu.dashboard')}</span>
+                    <span>{t.userMenu.dashboard}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t('header.auth.logout')}</span>
+                  <span>{t.auth.logout}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="hidden md:flex items-center space-x-2">
               <Link href="/login">
-                <Button variant="ghost">{t('header.auth.login')}</Button>
+                <Button variant="ghost">{t.auth.login}</Button>
               </Link>
               <Link href="/register">
-                <Button>{t('header.auth.signup')}</Button>
+                <Button>{t.auth.signup}</Button>
               </Link>
             </div>
           )}
@@ -128,7 +133,7 @@ export default function Header() {
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">{t('header.mobile.toggle')}</span>
+                <span className="sr-only">{t.mobile.toggle}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
@@ -136,7 +141,7 @@ export default function Header() {
                 <div className="border-b pb-4">
                   <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
                     <Briefcase className="h-6 w-6 text-primary" />
-                    <span>{t('header.title')}</span>
+                    <span>{t.title}</span>
                   </Link>
                 </div>
                 <nav className="flex-grow mt-6">
@@ -155,17 +160,17 @@ export default function Header() {
                 </nav>
                 <div className="mt-auto border-t pt-4">
                   {user ? (
-                      <Button onClick={handleSignOut} className="w-full">{t('header.auth.logout')}</Button>
+                      <Button onClick={handleSignOut} className="w-full">{t.auth.logout}</Button>
                   ) : (
                     <div className="flex flex-col space-y-2">
                         <SheetClose asChild>
                             <Link href="/login">
-                                <Button variant="ghost" className="w-full">{t('header.auth.login')}</Button>
+                                <Button variant="ghost" className="w-full">{t.auth.login}</Button>
                             </Link>
                         </SheetClose>
                         <SheetClose asChild>
                             <Link href="/register">
-                                <Button className="w-full">{t('header.auth.signup')}</Button>
+                                <Button className="w-full">{t.auth.signup}</Button>
                             </Link>
                         </SheetClose>
                     </div>
