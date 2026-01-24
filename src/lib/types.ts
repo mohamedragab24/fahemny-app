@@ -4,6 +4,9 @@ export type UserProfile = {
   lastName: string;
   email: string;
   userType: 'employer' | 'freelancer';
+  photoURL?: string;
+  isVerified?: boolean;
+  isAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
 };

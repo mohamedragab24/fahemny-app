@@ -71,6 +71,9 @@ export default function RegisterPage() {
         lastName: values.lastName,
         email: values.email,
         userType: values.userType,
+        photoURL: '',
+        isVerified: false,
+        isAdmin: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

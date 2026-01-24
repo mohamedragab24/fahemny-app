@@ -38,8 +38,10 @@ import { z } from 'zod';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import ar from '@/locales/ar';
 
 function ProjectProposals({ projectId }: { projectId: string }) {
+  const t = ar.project_details;
   const firestore = useFirestore();
 
   const offersQuery = useMemoFirebase(
@@ -68,7 +70,7 @@ function ProjectProposals({ projectId }: { projectId: string }) {
 
   if (!offers || offers.length === 0) {
     return (
-      <p className="text-muted-foreground">No proposals submitted yet.</p>
+      <p className="text-muted-foreground">{t.no_proposals}</p>
     );
   }
 
@@ -82,12 +84,17 @@ function ProjectProposals({ projectId }: { projectId: string }) {
 }
 
 function OfferCard({ offer }: { offer: Offer }) {
+  const t = ar.user_types;
   const firestore = useFirestore();
   const freelancerRef = useMemoFirebase(
     () => doc(firestore, 'userProfiles', offer.freelancerId),
     [firestore, offer.freelancerId]
   );
   const { data: freelancer, isLoading } = useDoc<UserProfile>(freelancerRef);
+  
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  }
 
   if (isLoading || !freelancer) {
     return (
@@ -104,20 +111,21 @@ function OfferCard({ offer }: { offer: Offer }) {
   return (
      <div className="flex gap-4">
         <Avatar>
-            <AvatarImage src={undefined} />
-            <AvatarFallback>{freelancer.firstName.charAt(0)}</AvatarFallback>
+            <AvatarImage src={freelancer.photoURL} />
+            <AvatarFallback>{getInitials(freelancer.firstName, freelancer.lastName)}</AvatarFallback>
         </Avatar>
         <div className="flex-grow">
             <div className="flex justify-between items-center">
-                <div>
+                <div className="flex items-center gap-2">
                     <p className="font-semibold">{freelancer.firstName} {freelancer.lastName}</p>
-                    <p className="text-sm text-muted-foreground">{freelancer.userType}</p>
+                    {freelancer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
                 </div>
                 <div className="text-right">
                     <p className="font-semibold text-lg">${offer.rate}/hr</p>
                     {offer.createdAt && <p className="text-sm text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</p>}
                 </div>
             </div>
+            <p className="text-sm text-muted-foreground mt-1">{t[freelancer.userType]}</p>
             <p className="text-sm text-muted-foreground mt-2 bg-secondary/50 p-3 rounded-md">{offer.description}</p>
         </div>
     </div>
@@ -125,6 +133,7 @@ function OfferCard({ offer }: { offer: Offer }) {
 }
 
 function EmployerCard({ employerId }: { employerId: string }) {
+  const t = ar.project_details;
   const firestore = useFirestore();
   const employerRef = useMemoFirebase(
     () => doc(firestore, 'userProfiles', employerId),
@@ -132,6 +141,10 @@ function EmployerCard({ employerId }: { employerId: string }) {
   );
   const { data: employer, isLoading } = useDoc<UserProfile>(employerRef);
   
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  }
+
   if (isLoading || !employer) {
     return <Skeleton className="h-24 w-full" />
   }
@@ -139,23 +152,25 @@ function EmployerCard({ employerId }: { employerId: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">About the Employer</CardTitle>
+        <CardTitle className="font-headline">{t.about_employer}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarImage src={undefined} />
-            <AvatarFallback>{employer.firstName.charAt(0)}</AvatarFallback>
+            <AvatarImage src={employer.photoURL} />
+            <AvatarFallback>{getInitials(employer.firstName, employer.lastName)}</AvatarFallback>
           </Avatar>
           <div>
             <p className="font-semibold">{employer.firstName} {employer.lastName}</p>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <CheckCircle className="h-4 w-4 text-primary" />
-              <span>Verified</span>
-            </div>
+            {employer.isVerified && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span>{t.verified}</span>
+              </div>
+            )}
           </div>
         </div>
-        <Button className="w-full">View Profile</Button>
+        <Button className="w-full">{t.view_profile}</Button>
       </CardContent>
     </Card>
   );
@@ -167,6 +182,7 @@ const proposalSchema = z.object({
 });
 
 function ProposalForm({ projectId }: { projectId: string }) {
+  const t = ar.project_details;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -186,7 +202,7 @@ function ProposalForm({ projectId }: { projectId: string }) {
   }
 
   if (!user) {
-    return <p className='text-muted-foreground'>Please <Link href="/login" className="underline">log in</Link> to submit a proposal.</p>
+    return <p className='text-muted-foreground'>{t.login_prompt} <Link href="/login" className="underline">{ar.header.auth.login}</Link></p>
   }
 
   async function onSubmit(values: z.infer<typeof proposalSchema>) {
@@ -206,8 +222,8 @@ function ProposalForm({ projectId }: { projectId: string }) {
     addDocumentNonBlocking(offersCollection, offerData);
     
     toast({
-        title: "Proposal Submitted!",
-        description: "Your proposal has been sent to the employer.",
+        title: "تم تقديم العرض!",
+        description: "تم إرسال عرضك إلى صاحب العمل.",
     });
     form.reset();
   }
@@ -215,23 +231,23 @@ function ProposalForm({ projectId }: { projectId: string }) {
   return (
      <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Submit Your Proposal</CardTitle>
+          <CardTitle className="font-headline">{t.submit_proposal_title}</CardTitle>
         </CardHeader>
         <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="rate">Your Hourly Rate ($)</Label>
-            <Input id="rate" type="number" placeholder="e.g., 50" className="max-w-xs" {...form.register("rate")} />
+            <Label htmlFor="rate">{t.rate_label}</Label>
+            <Input id="rate" type="number" placeholder={t.rate_placeholder} className="max-w-xs" {...form.register("rate")} />
             {form.formState.errors.rate && <p className="text-sm text-destructive">{form.formState.errors.rate.message}</p>}
           </div>
           <div className="space-y-1">
-             <Label htmlFor="cover-letter">Cover Letter</Label>
-            <Textarea id="cover-letter" placeholder="Explain why you're the best fit for this project." className="min-h-[150px]" {...form.register("coverLetter")} />
+             <Label htmlFor="cover-letter">{t.cover_letter_label}</Label>
+            <Textarea id="cover-letter" placeholder={t.cover_letter_placeholder} className="min-h-[150px]" {...form.register("coverLetter")} />
             {form.formState.errors.coverLetter && <p className="text-sm text-destructive">{form.formState.errors.coverLetter.message}</p>}
           </div>
           <Button size="lg" type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit Proposal
+            {isSubmitting ? t.submitting_button : t.submit_button}
           </Button>
         </form>
         </CardContent>
@@ -244,6 +260,7 @@ export default function ProjectDetailsPage({
 }: {
   params: { id: string };
 }) {
+  const t = ar.project_details;
   const firestore = useFirestore();
   const projectRef = useMemoFirebase(
     () => doc(firestore, 'projects', params.id),
@@ -279,14 +296,14 @@ export default function ProjectDetailsPage({
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   <span>
-                    Deadline:{' '}
+                    {t.deadline}{' '}
                     {new Date(project.deadline).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   {/* The number of proposals will now come from the collection query */}
-                  <span>Proposals</span>
+                  <span>{t.proposals_count}</span>
                 </div>
               </div>
             </CardHeader>
@@ -304,14 +321,14 @@ export default function ProjectDetailsPage({
                 </div>
               )}
               <h3 className="font-semibold text-lg mb-2">
-                Project Description
+                {ar.create_project.project_description_label}
               </h3>
               <p className="text-muted-foreground whitespace-pre-wrap">
                 {project.description}
               </p>
               {project.tags && project.tags.length > 0 && <>
                 <Separator className="my-6" />
-                <h3 className="font-semibold text-lg mb-4">Required Skills</h3>
+                <h3 className="font-semibold text-lg mb-4">{ar.create_project.tags_label}</h3>
                 <div className="flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
                     <Badge key={tag} variant="secondary">
@@ -327,7 +344,7 @@ export default function ProjectDetailsPage({
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline">Proposals</CardTitle>
+              <CardTitle className="font-headline">{t.proposals}</CardTitle>
             </CardHeader>
             <CardContent>
                 <ProjectProposals projectId={project.id} />
@@ -339,7 +356,7 @@ export default function ProjectDetailsPage({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">
-                Project Budget
+                {t.project_budget}
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -347,7 +364,7 @@ export default function ProjectDetailsPage({
               <div className="text-2xl font-bold text-primary">
                 ${project.budget}
               </div>
-              <p className="text-xs text-muted-foreground">Fixed Price</p>
+              <p className="text-xs text-muted-foreground">{t.fixed_price}</p>
             </CardContent>
           </Card>
           

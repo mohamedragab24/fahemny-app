@@ -8,7 +8,8 @@ import {
   Menu,
   MessageSquare,
   User,
-  LogOut
+  LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sheet,
@@ -16,7 +17,7 @@ import {
   SheetTrigger,
   SheetClose
 } from "@/components/ui/sheet";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
@@ -27,14 +28,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type ar from '@/locales/ar';
+import type { UserProfile } from "@/lib/types";
+import { doc } from "firebase/firestore";
+import ar from "@/locales/ar";
 
 type Translations = typeof ar.header;
 
 export default function Header({ translations: t }: { translations: Translations}) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
+
+  const userProfileRef = useMemoFirebase(
+    () => user ? doc(firestore, 'userProfiles', user.uid) : null,
+    [firestore, user]
+  );
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -52,6 +62,10 @@ export default function Header({ translations: t }: { translations: Translations
       { href: "/dashboard", label: t.links.dashboard, icon: <User className="h-5 w-5" /> },
       { href: "/messages", label: t.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
   ];
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || user?.email?.[0].toUpperCase();
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -76,20 +90,20 @@ export default function Header({ translations: t }: { translations: Translations
         <div className="flex flex-1 items-center justify-end space-x-2">
           {isUserLoading ? (
             <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
-          ) : user ? (
+          ) : user && userProfile ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || ''} />
-                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={userProfile.photoURL || undefined} alt={`${userProfile.firstName} ${userProfile.lastName}`} />
+                    <AvatarFallback>{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.displayName || "User"}</p>
+                    <p className="text-sm font-medium leading-none">{userProfile.firstName} {userProfile.lastName}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
                     </p>
@@ -100,6 +114,12 @@ export default function Header({ translations: t }: { translations: Translations
                     <User className="mr-2 h-4 w-4" />
                     <span>{t.userMenu.dashboard}</span>
                 </DropdownMenuItem>
+                {userProfile.isAdmin && (
+                  <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    <span>{t.links.admin_dashboard}</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />

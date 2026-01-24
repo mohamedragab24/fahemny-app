@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Search, Send, Loader2, MessageSquare } from "lucide-react";
+import { Search, Send, Loader2, MessageSquare, CheckCircle } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { Message, UserProfile } from "@/lib/types";
@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { doc } from "firebase/firestore";
+import ar from "@/locales/ar";
 
 // Hook to fetch and prepare conversation data
 function useConversations() {
@@ -66,6 +67,9 @@ function useConversations() {
   };
 }
 
+const getInitials = (firstName?: string, lastName?: string) => {
+  return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+}
 
 function ConversationListItem({ conversation, onSelect, isSelected }: { conversation: Message, onSelect: (partnerId: string) => void, isSelected: boolean }) {
     const { user } = useUser();
@@ -100,11 +104,14 @@ function ConversationListItem({ conversation, onSelect, isSelected }: { conversa
             )}
         >
             <Avatar>
-                <AvatarImage src={undefined} />
-                <AvatarFallback>{partnerProfile.firstName.charAt(0)}</AvatarFallback>
+                <AvatarImage src={partnerProfile.photoURL} />
+                <AvatarFallback>{getInitials(partnerProfile.firstName, partnerProfile.lastName)}</AvatarFallback>
             </Avatar>
             <div className="flex-grow overflow-hidden">
-                <p className="font-semibold truncate">{partnerProfile.firstName} {partnerProfile.lastName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold truncate">{partnerProfile.firstName} {partnerProfile.lastName}</p>
+                  {partnerProfile.isVerified && <CheckCircle className="h-4 w-4 text-primary shrink-0" />}
+                </div>
                 <p className="text-sm text-muted-foreground truncate">{conversation.content}</p>
             </div>
             <div className="text-xs text-muted-foreground text-right shrink-0">
@@ -115,6 +122,7 @@ function ConversationListItem({ conversation, onSelect, isSelected }: { conversa
 }
 
 function ChatWindow({ partnerId, messages }: { partnerId: string | null, messages: Message[] }) {
+    const t = ar.messages_page;
     const { user } = useUser();
     const firestore = useFirestore();
     const [newMessage, setNewMessage] = useState("");
@@ -138,8 +146,8 @@ function ChatWindow({ partnerId, messages }: { partnerId: string | null, message
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-2xl font-semibold font-headline">Select a conversation</p>
-                <p className="text-muted-foreground">Choose a chat from the left to start messaging.</p>
+                <p className="text-2xl font-semibold font-headline">{t.select_conversation_title}</p>
+                <p className="text-muted-foreground">{t.select_conversation_description}</p>
             </div>
         )
     }
@@ -169,18 +177,23 @@ function ChatWindow({ partnerId, messages }: { partnerId: string | null, message
             <div className="p-4 border-b flex items-center gap-3 bg-secondary/50">
                 {isProfileLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (
                     <Avatar>
-                        <AvatarImage src={undefined} />
-                        <AvatarFallback>{partnerProfile?.firstName.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={partnerProfile?.photoURL} />
+                        <AvatarFallback>{getInitials(partnerProfile?.firstName, partnerProfile?.lastName)}</AvatarFallback>
                     </Avatar>
                 )}
                  <div>
-                    {isProfileLoading ? <Skeleton className="h-5 w-32" /> : <p className="font-semibold">{partnerProfile?.firstName} {partnerProfile?.lastName}</p>}
+                    {isProfileLoading ? <Skeleton className="h-5 w-32" /> : (
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{partnerProfile?.firstName} {partnerProfile?.lastName}</p>
+                        {partnerProfile?.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
+                      </div>
+                    )}
                 </div>
             </div>
             <ScrollArea className="flex-grow bg-secondary/30">
                 <div className="p-6 space-y-4">
                 {messages.length === 0 ? (
-                    <div className="text-center text-muted-foreground pt-10">No messages yet. Start the conversation!</div>
+                    <div className="text-center text-muted-foreground pt-10">{t.no_messages}</div>
                 ) : (
                     messages.map((msg) => (
                     <div key={msg.id} className={cn("flex gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
@@ -202,7 +215,7 @@ function ChatWindow({ partnerId, messages }: { partnerId: string | null, message
             <div className="p-4 border-t bg-background">
                 <form onSubmit={handleSendMessage} className="relative">
                     <Input 
-                        placeholder="Type a message..." 
+                        placeholder={t.message_placeholder}
                         className="pr-12 h-12"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
@@ -219,6 +232,7 @@ function ChatWindow({ partnerId, messages }: { partnerId: string | null, message
 
 
 export default function MessagesPage() {
+  const t = ar.messages_page;
   const { user, isUserLoading } = useUser();
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const { conversations: lastMessages, isLoading: areConversationsLoading, allMessages } = useConversations();
@@ -261,10 +275,10 @@ export default function MessagesPage() {
       <Card className="h-full grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
         <div className="md:col-span-1 lg:col-span-1 border-r flex flex-col">
           <div className="p-4 border-b">
-            <h1 className="text-2xl font-bold font-headline">Messages</h1>
+            <h1 className="text-2xl font-bold font-headline">{t.title}</h1>
             <div className="relative mt-4">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search messages..." className="pl-8" />
+              <Input placeholder={t.search_placeholder} className="pl-8" />
             </div>
           </div>
           <ScrollArea className="flex-grow">
@@ -275,7 +289,7 @@ export default function MessagesPage() {
                     <Skeleton className="h-16 w-full" />
                 </div>
             ) : lastMessages.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">No conversations.</div>
+                <div className="p-4 text-center text-muted-foreground">{t.no_conversations}</div>
             ) : lastMessages.map((convo) => {
                 const partnerId = convo.senderId === user.uid ? convo.receiverId : convo.senderId;
                 return (

@@ -15,8 +15,11 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Project } from '@/lib/types';
 import ProjectCard from '@/components/ProjectCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import ar from '@/locales/ar';
 
 export default function ProjectsPage() {
+  const t = ar.projects_page;
+  const tc = ar.create_project.categories;
   const firestore = useFirestore();
   const projectsRef = useMemoFirebase(
     () => collection(firestore, 'projects'),
@@ -28,11 +31,10 @@ export default function ProjectsPage() {
     <div className="container mx-auto py-10">
       <div className="mb-10 text-center">
         <h1 className="text-4xl font-bold font-headline">
-          Find Your Next Project
+          {t.title}
         </h1>
         <p className="text-muted-foreground mt-2">
-          Browse thousands of opportunities to find the perfect match for your
-          skills.
+          {t.subtitle}
         </p>
       </div>
 
@@ -40,34 +42,34 @@ export default function ProjectsPage() {
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search by keyword (e.g., 'React', 'UI/UX')"
+            placeholder={t.search_placeholder}
             className="pl-10"
           />
         </div>
         <Select>
           <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder={t.category_placeholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="web-dev">Web Development</SelectItem>
-            <SelectItem value="mobile-dev">Mobile Development</SelectItem>
-            <SelectItem value="design">Design</SelectItem>
-            <SelectItem value="writing">Writing</SelectItem>
-            <SelectItem value="devops">DevOps</SelectItem>
+            <SelectItem value="web-dev">{tc.web_dev}</SelectItem>
+            <SelectItem value="mobile-dev">{tc.mobile_dev}</SelectItem>
+            <SelectItem value="design">{tc.design}</SelectItem>
+            <SelectItem value="writing">{tc.writing}</SelectItem>
+            <SelectItem value="devops">{tc.devops}</SelectItem>
           </SelectContent>
         </Select>
         <Select>
           <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Budget" />
+            <SelectValue placeholder={t.budget_placeholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="under-1k">Under $1,000</SelectItem>
-            <SelectItem value="1k-5k">$1,000 - $5,000</SelectItem>
-            <SelectItem value="5k-10k">$5,000 - $10,000</SelectItem>
-            <SelectItem value="over-10k">Over $10,000</SelectItem>
+            <SelectItem value="under-1k">{t.budgets.under_1k}</SelectItem>
+            <SelectItem value="1k-5k">{t.budgets["1k_5k"]}</SelectItem>
+            <SelectItem value="5k-10k">{t.budgets["5k_10k"]}</SelectItem>
+            <SelectItem value="over-10k">{t.budgets.over_10k}</SelectItem>
           </SelectContent>
         </Select>
-        <Button className="w-full md:w-auto">Search</Button>
+        <Button className="w-full md:w-auto">{t.search_button}</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -90,7 +92,7 @@ export default function ProjectsPage() {
       </div>
       {!isLoading && projects?.length === 0 && (
         <div className="text-center text-muted-foreground col-span-full pt-10">
-          No projects found.
+          {t.no_projects}
         </div>
       )}
     </div>

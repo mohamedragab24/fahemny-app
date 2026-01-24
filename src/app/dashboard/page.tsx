@@ -11,14 +11,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import type { Project, Offer, UserProfile } from "@/lib/types";
 import { collection, query, where, doc } from "firebase/firestore";
 import ProjectCard from "@/components/ProjectCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import ar from "@/locales/ar";
+import ProfileSettings from "@/components/ProfileSettings";
 
 function MyProjects() {
+    const t = ar.dashboard;
     const { user } = useUser();
     const firestore = useFirestore();
 
@@ -57,9 +59,9 @@ function MyProjects() {
                 </div>
             ) : (
                 <div className="text-center text-muted-foreground pt-8 pb-4">
-                    <p>You haven&apos;t posted any projects yet.</p>
+                    <p>{t.no_projects}</p>
                     <Button asChild className="mt-4">
-                        <Link href="/projects/create">Post a Project</Link>
+                        <Link href="/projects/create">{t.post_project_button}</Link>
                     </Button>
                 </div>
             )}
@@ -68,6 +70,7 @@ function MyProjects() {
 }
 
 function ProposalCard({ offer }: { offer: Offer }) {
+    const t = ar.dashboard;
     const firestore = useFirestore();
     const projectRef = useMemoFirebase(
         () => doc(firestore, 'projects', offer.projectId),
@@ -91,7 +94,7 @@ function ProposalCard({ offer }: { offer: Offer }) {
             <CardHeader>
                  <CardTitle className="text-lg font-headline">{project.title}</CardTitle>
                  <CardDescription>
-                    Status: <span className="capitalize font-medium text-foreground">{offer.status}</span>
+                    {t.status_label} <span className="capitalize font-medium text-foreground">{offer.status}</span>
                  </CardDescription>
             </CardHeader>
             <CardContent>
@@ -99,11 +102,11 @@ function ProposalCard({ offer }: { offer: Offer }) {
             </CardContent>
             <CardFooter className="flex justify-between items-center bg-secondary/50 py-3 px-6">
                 <div>
-                    <span className="text-sm text-muted-foreground">Your Rate: </span>
+                    <span className="text-sm text-muted-foreground">{t.rate_label} </span>
                     <span className="font-bold text-primary">${offer.rate}</span>
                 </div>
                 <Button asChild variant="secondary">
-                    <Link href={`/projects/${project.id}`}>View Project</Link>
+                    <Link href={`/projects/${project.id}`}>{ar.project_details.view_project}</Link>
                 </Button>
             </CardFooter>
         </Card>
@@ -112,6 +115,7 @@ function ProposalCard({ offer }: { offer: Offer }) {
 
 
 function MyProposals() {
+    const t = ar.dashboard;
     const { user } = useUser();
     const firestore = useFirestore();
 
@@ -141,9 +145,9 @@ function MyProposals() {
                 </div>
             ) : (
                 <div className="text-center text-muted-foreground pt-8 pb-4">
-                    <p>You haven&apos;t submitted any proposals yet.</p>
+                    <p>{t.no_proposals}</p>
                      <Button asChild className="mt-4">
-                        <Link href="/projects">Browse Projects</Link>
+                        <Link href="/projects">{t.browse_projects_button}</Link>
                     </Button>
                 </div>
             )}
@@ -152,6 +156,7 @@ function MyProposals() {
 }
 
 export default function DashboardPage() {
+  const t = ar.dashboard;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -188,28 +193,28 @@ export default function DashboardPage() {
     const mainTab = userProfile.userType === 'employer' 
     ? { 
         value: 'projects', 
-        label: 'My Projects', 
+        label: t.my_projects,
         Content: <MyProjects />,
-        description: 'Projects you have posted.'
+        description: ar.home.features.talent.description
       } 
     : { 
         value: 'proposals', 
-        label: 'My Proposals', 
+        label: t.my_proposals,
         Content: <MyProposals />,
-        description: 'Proposals you have submitted for various projects.'
+        description: ar.home.features.find_work.description
       };
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-2 font-headline">My Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-2 font-headline">{t.title}</h1>
       <p className="text-muted-foreground mb-8">
-        Welcome back, {userProfile.firstName}! Here&apos;s an overview of your activity.
+        {t.welcome.replace('{firstName}', userProfile.firstName)}
       </p>
 
       <Tabs defaultValue={mainTab.value} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-[300px]">
           <TabsTrigger value={mainTab.value}>{mainTab.label}</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="settings">{t.settings}</TabsTrigger>
         </TabsList>
         
         <TabsContent value={mainTab.value}>
@@ -227,33 +232,7 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>
-                Manage your account and notification settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <h3 className="font-semibold">Profile Information</h3>
-                    <p className="text-muted-foreground text-sm">Update your personal details and preferences.</p>
-                    <Button variant="secondary">Edit Profile</Button>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                    <h3 className="font-semibold">Password</h3>
-                    <p className="text-muted-foreground text-sm">Change your password for better security.</p>
-                    <Button variant="secondary">Change Password</Button>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                    <h3 className="font-semibold">Notifications</h3>
-                    <p className="text-muted-foreground text-sm">Configure your email and push notification settings.</p>
-                    <Button variant="secondary">Manage Notifications</Button>
-                </div>
-            </CardContent>
-          </Card>
+          <ProfileSettings userProfile={userProfile} />
         </TabsContent>
       </Tabs>
     </div>

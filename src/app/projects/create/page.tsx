@@ -28,55 +28,57 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import * as React from "react";
+import ar from "@/locales/ar";
 
 export default function CreateProjectPage() {
+  const t = ar.create_project;
   const [date, setDate] = React.useState<Date>();
 
   return (
     <div className="container mx-auto py-10">
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">Create a New Project</CardTitle>
+          <CardTitle className="font-headline text-2xl">{t.title}</CardTitle>
           <CardDescription>
-            Fill out the details below to post your project and attract top talent.
+            {t.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Project Title</Label>
-            <Input id="title" placeholder="e.g., 'Build a Modern E-commerce Website'" />
+            <Label htmlFor="title">{t.project_title_label}</Label>
+            <Input id="title" placeholder={t.project_title_placeholder} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Project Description</Label>
+            <Label htmlFor="description">{t.project_description_label}</Label>
             <Textarea
               id="description"
-              placeholder="Describe your project in detail, including goals, scope, and required skills."
+              placeholder={t.project_description_placeholder}
               className="min-h-[150px]"
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">{t.category_label}</Label>
               <Select>
                 <SelectTrigger id="category">
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder={t.category_placeholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="web-dev">Web Development</SelectItem>
-                  <SelectItem value="mobile-dev">Mobile Development</SelectItem>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="writing">Writing</SelectItem>
-                  <SelectItem value="devops">DevOps</SelectItem>
+                  <SelectItem value="web-dev">{t.categories.web_dev}</SelectItem>
+                  <SelectItem value="mobile-dev">{t.categories.mobile_dev}</SelectItem>
+                  <SelectItem value="design">{t.categories.design}</SelectItem>
+                  <SelectItem value="writing">{t.categories.writing}</SelectItem>
+                  <SelectItem value="devops">{t.categories.devops}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="budget">Budget ($)</Label>
-              <Input id="budget" type="number" placeholder="e.g., 5000" />
+              <Label htmlFor="budget">{t.budget_label}</Label>
+              <Input id="budget" type="number" placeholder={t.budget_placeholder} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="deadline">Application Deadline</Label>
+            <Label htmlFor="deadline">{t.deadline_label}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -87,7 +89,7 @@ export default function CreateProjectPage() {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  {date ? format(date, "PPP") : <span>{t.deadline_placeholder}</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -101,11 +103,11 @@ export default function CreateProjectPage() {
             </Popover>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tags">Skills / Tags (comma-separated)</Label>
-            <Input id="tags" placeholder="e.g., 'React, Node.js, Figma'" />
+            <Label htmlFor="tags">{t.tags_label}</Label>
+            <Input id="tags" placeholder={t.tags_placeholder} />
           </div>
           <Button size="lg" className="w-full">
-            Post Project
+            {t.submit_button}
           </Button>
         </CardContent>
       </Card>

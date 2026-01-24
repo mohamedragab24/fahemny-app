@@ -16,12 +16,14 @@ import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Project, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import ar from '@/locales/ar';
 
 interface ProjectCardProps {
   project: Project;
 }
 
 function EmployerDetails({ employerId }: { employerId: string }) {
+  const t = ar.project_details;
   const firestore = useFirestore();
   const employerRef = useMemoFirebase(
     () => (employerId ? doc(firestore, 'userProfiles', employerId) : null),
@@ -34,21 +36,21 @@ function EmployerDetails({ employerId }: { employerId: string }) {
   }
 
   if (!employer) {
-    return <span className="text-sm text-muted-foreground">by an employer</span>;
+    return <span className="text-sm text-muted-foreground">{t.by_employer}</span>;
   }
 
   return (
     <div className="flex items-center gap-2 mt-2">
       <span className="text-sm text-muted-foreground">
-        by {employer.firstName} {employer.lastName}
+        بواسطة {employer.firstName} {employer.lastName}
       </span>
-      {/* Assuming all registered users are "verified" in a sense. The old model had a boolean. */}
-      <CheckCircle className="h-4 w-4 text-primary" />
+      {employer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
     </div>
   );
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
+  const t = ar.project_details;
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -74,7 +76,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       <CardFooter className="flex justify-between items-center">
         <div className="font-bold text-primary">${project.budget}</div>
         <Link href={`/projects/${project.id}`}>
-          <Button>View Project</Button>
+          <Button>{t.view_project}</Button>
         </Link>
       </CardFooter>
     </Card>
