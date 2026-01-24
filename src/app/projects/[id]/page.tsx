@@ -40,19 +40,22 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import ar from '@/locales/ar';
 
-function ProjectProposals({ projectId }: { projectId: string }) {
+function ProjectProposals({ project }: { project: Project }) {
   const t = ar.project_details;
+  const { user } = useUser();
   const firestore = useFirestore();
 
   const offersQuery = useMemoFirebase(
     () =>
-      projectId
-        ? query(collection(firestore, 'offers'), where('projectId', '==', projectId))
+      project.id
+        ? query(collection(firestore, 'offers'), where('projectId', '==', project.id))
         : null,
-    [firestore, projectId]
+    [firestore, project.id]
   );
 
   const { data: offers, isLoading } = useCollection<Offer>(offersQuery);
+  
+  if (user?.uid !== project.employerId) return null;
 
   if (isLoading) {
     return (
@@ -68,18 +71,21 @@ function ProjectProposals({ projectId }: { projectId: string }) {
     );
   }
 
-  if (!offers || offers.length === 0) {
-    return (
-      <p className="text-muted-foreground">{t.no_proposals}</p>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {offers.map((offer) => (
-        <OfferCard key={offer.id} offer={offer} />
-      ))}
-    </div>
+     <Card>
+      <CardHeader>
+        <CardTitle className="font-headline">{t.proposals} ({offers?.length || 0})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {!offers || offers.length === 0 ? (
+           <p className="text-muted-foreground">{t.no_proposals}</p>
+        ) : (
+          offers.map((offer) => (
+            <OfferCard key={offer.id} offer={offer} />
+          ))
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -98,35 +104,35 @@ function OfferCard({ offer }: { offer: Offer }) {
 
   if (isLoading || !freelancer) {
     return (
-        <div className="flex gap-4">
-            <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="flex gap-4 p-4 border rounded-lg">
+            <Skeleton className="h-12 w-12 rounded-full" />
             <div className="flex-grow space-y-2">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-5 w-1/4" />
+                <Skeleton className="h-16 w-full" />
             </div>
         </div>
     )
   }
   
   return (
-     <div className="flex gap-4">
-        <Avatar>
+     <div className="flex gap-4 p-4 border rounded-lg bg-secondary/30">
+        <Avatar className='h-12 w-12'>
             <AvatarImage src={freelancer.photoURL} />
             <AvatarFallback>{getInitials(freelancer.firstName, freelancer.lastName)}</AvatarFallback>
         </Avatar>
         <div className="flex-grow">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
-                    <p className="font-semibold">{freelancer.firstName} {freelancer.lastName}</p>
+                    <p className="font-semibold text-lg">{freelancer.firstName} {freelancer.lastName}</p>
                     {freelancer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
                 </div>
                 <div className="text-right">
-                    <p className="font-semibold text-lg">${offer.rate}/hr</p>
+                    <p className="font-bold text-xl text-primary">${offer.rate}</p>
                     {offer.createdAt && <p className="text-sm text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</p>}
                 </div>
             </div>
             <p className="text-sm text-muted-foreground mt-1">{t[freelancer.userType]}</p>
-            <p className="text-sm text-muted-foreground mt-2 bg-secondary/50 p-3 rounded-md">{offer.description}</p>
+            <p className="text-muted-foreground mt-4 whitespace-pre-wrap">{offer.description}</p>
         </div>
     </div>
   )
@@ -177,42 +183,85 @@ function EmployerCard({ employerId }: { employerId: string }) {
 }
 
 const proposalSchema = z.object({
-  rate: z.coerce.number().min(1, "Rate is required"),
-  coverLetter: z.string().min(10, "Cover letter must be at least 10 characters"),
+  rate: z.coerce.number().min(1, "السعر مطلوب"),
+  description: z.string().min(10, "رسالة التغطية يجب أن تكون 10 أحرف على الأقل"),
 });
 
-function ProposalForm({ projectId }: { projectId: string }) {
+function ProposalForm({ project }: { project: Project }) {
   const t = ar.project_details;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const userProfileRef = useMemoFirebase(
+    () => user ? doc(firestore, 'userProfiles', user.uid) : null,
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const offersQuery = useMemoFirebase(
+      () => user ? query(collection(firestore, 'offers'), where('projectId', '==', project.id), where('freelancerId', '==', user.uid)) : null,
+      [firestore, user, project.id]
+  );
+  const {data: existingOffers, isLoading: isOffersLoading} = useCollection<Offer>(offersQuery);
 
   const form = useForm<z.infer<typeof proposalSchema>>({
     resolver: zodResolver(proposalSchema),
     defaultValues: {
-      rate: 0,
-      coverLetter: ""
+      rate: undefined,
+      description: ""
     }
   });
   
   const { formState: {isSubmitting} } = form;
+  
+  const isLoading = isUserLoading || isProfileLoading || isOffersLoading;
 
-  if (isUserLoading) {
-    return <Skeleton className="h-48 w-full" />
+  if (isLoading) {
+    return <Skeleton className="h-64 w-full" />
+  }
+  
+  // Hide form if user is the project employer
+  if (user?.uid === project.employerId) {
+      return null;
+  }
+  
+  // Prompt to log in if not logged in
+  if (!user || !userProfile) {
+    return (
+        <Card className='text-center p-8'>
+            <p className='text-muted-foreground'>{t.login_prompt} <Link href="/login" className="underline font-semibold text-primary">{ar.header.auth.login}</Link></p>
+        </Card>
+    )
+  }
+  
+  // Show message if user is not a freelancer
+  if (userProfile.userType !== 'freelancer') {
+      return (
+          <Card className='text-center p-8'>
+            <p className='text-muted-foreground'>يجب أن تكون مستقلاً لتقديم عرض.</p>
+        </Card>
+      )
   }
 
-  if (!user) {
-    return <p className='text-muted-foreground'>{t.login_prompt} <Link href="/login" className="underline">{ar.header.auth.login}</Link></p>
+  // Show message if freelancer has already submitted a proposal
+  if (existingOffers && existingOffers.length > 0) {
+      return (
+          <Card className='p-6'>
+            <CardTitle className='mb-4 font-headline'>تم تقديم عرضك</CardTitle>
+            <OfferCard offer={existingOffers[0]} />
+        </Card>
+      )
   }
 
   async function onSubmit(values: z.infer<typeof proposalSchema>) {
     if (!user) return;
 
     const offerData = {
-        projectId: projectId,
+        projectId: project.id,
         freelancerId: user.uid,
         rate: values.rate,
-        description: values.coverLetter,
+        description: values.description,
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -242,8 +291,8 @@ function ProposalForm({ projectId }: { projectId: string }) {
           </div>
           <div className="space-y-1">
              <Label htmlFor="cover-letter">{t.cover_letter_label}</Label>
-            <Textarea id="cover-letter" placeholder={t.cover_letter_placeholder} className="min-h-[150px]" {...form.register("coverLetter")} />
-            {form.formState.errors.coverLetter && <p className="text-sm text-destructive">{form.formState.errors.coverLetter.message}</p>}
+            <Textarea id="cover-letter" placeholder={t.cover_letter_placeholder} className="min-h-[150px]" {...form.register("description")} />
+            {form.formState.errors.description && <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>}
           </div>
           <Button size="lg" type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -267,11 +316,18 @@ export default function ProjectDetailsPage({
     [firestore, params.id]
   );
   const { data: project, isLoading } = useDoc<Project>(projectRef);
+  
+  const offersQuery = useMemoFirebase(
+      () => params.id ? query(collection(firestore, 'offers'), where('projectId', '==', params.id)) : null,
+      [firestore, params.id]
+  );
+  const { data: offers, isLoading: offersLoading } = useCollection(offersQuery);
+  
   const projectImagePlaceholder = PlaceHolderImages.find(
     (p) => p.id === 'project-detail-image'
   );
 
-  if (isLoading) {
+  if (isLoading || offersLoading) {
     return (
       <div className="container mx-auto py-10">
          <Skeleton className="h-screen w-full" />
@@ -304,8 +360,7 @@ export default function ProjectDetailsPage({
                 </div>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  {/* The number of proposals will now come from the collection query */}
-                  <span>{t.proposals_count}</span>
+                  <span>{offers?.length || 0} {t.proposals}</span>
                 </div>
               </div>
             </CardHeader>
@@ -342,16 +397,10 @@ export default function ProjectDetailsPage({
             </CardContent>
           </Card>
 
-          <ProposalForm projectId={project.id} />
+          <ProposalForm project={project} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">{t.proposals}</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ProjectProposals projectId={project.id} />
-            </CardContent>
-          </Card>
+          <ProjectProposals project={project} />
+
         </div>
 
         <div className="space-y-8">

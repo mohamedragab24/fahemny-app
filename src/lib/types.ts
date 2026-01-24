@@ -22,7 +22,6 @@ export type Project = {
   status: 'open' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
   tags?: string[];
   imageUrl?: string;
-  proposals?: number;
   createdAt: string;
   updatedAt: string;
 };

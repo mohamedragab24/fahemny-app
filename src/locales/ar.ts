@@ -13,7 +13,7 @@ export default {
       logout: 'تسجيل الخروج',
     },
     userMenu: {
-      dashboard: 'لوحة التحكم',
+      dashboard: 'Dashboard',
     },
     mobile: {
       toggle: 'تبديل القائمة',
@@ -154,8 +154,8 @@ export default {
     verified: 'موثق',
     view_profile: 'عرض الملف الشخصي',
     submit_proposal_title: 'قدم عرضك',
-    rate_label: 'سعرك بالساعة ($)',
-    rate_placeholder: 'مثال: 50',
+    rate_label: 'سعرك المقترح للمشروع ($)',
+    rate_placeholder: 'مثال: 450',
     cover_letter_label: 'رسالة التغطية',
     cover_letter_placeholder: 'اشرح لماذا أنت الأنسب لهذا المشروع.',
     submit_button: 'إرسال العرض',

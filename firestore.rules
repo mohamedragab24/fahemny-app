@@ -54,6 +54,9 @@ service cloud.firestore {
      * This function is robust against missing documents or fields.
      */
     function isAdmin() {
+      // Use `exists` for robustness against non-existent documents.
+      // Use `get` only when you need the document data, and `exists` when you only need to check for presence.
+      // Here we need data, so `get` is appropriate, but we must check for null on the result.
       let userProfile = get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
       return isSignedIn() && userProfile != null && 'isAdmin' in userProfile.data && userProfile.data.isAdmin == true;
     }
@@ -63,7 +66,8 @@ service cloud.firestore {
      * @param projectId The ID of the project to check.
      */
     function isProjectOwner(projectId) {
-      return get(/databases/$(database)/documents/projects/$(projectId)).data.employerId == request.auth.uid;
+      let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
+      return projectData != null && projectData.employerId == request.auth.uid;
     }
 
     /**
@@ -72,8 +76,9 @@ service cloud.firestore {
      * @param offerData The resource data of the offer document.
      */
     function isOfferParticipant(offerData) {
-      return isOwner(offerData.freelancerId) || isProjectOwner(offerData.projectId);
+      return offerData != null && (isOwner(offerData.freelancerId) || isProjectOwner(offerData.projectId));
     }
+
 
     /**
      * Validates that the user is a participant in a message thread (sender or receiver).
