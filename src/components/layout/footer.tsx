@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { BrainCircuit } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import type ar from '@/locales/ar';
+import ar from '@/locales/ar';
 
 type Translations = typeof ar.footer;
 
