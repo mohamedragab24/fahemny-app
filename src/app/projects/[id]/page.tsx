@@ -120,7 +120,7 @@ function OfferCard({ offer, project }: { offer: Offer, project: Project }) {
 
   if (isLoading || !freelancer) {
     return (
-        <div className="flex gap-4 p-4 border rounded-lg">
+        <div className="flex gap-4 p-4 border rounded-lg bg-secondary/30">
             <Skeleton className="h-12 w-12 rounded-full" />
             <div className="flex-grow space-y-2">
                 <Skeleton className="h-5 w-1/4" />
