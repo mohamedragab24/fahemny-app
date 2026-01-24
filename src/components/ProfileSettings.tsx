@@ -1,6 +1,7 @@
 "use client";
 
-import { useForm, zodResolver } from "@mantine/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Form,
@@ -21,6 +22,7 @@ import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
+import { Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "الاسم الأول مطلوب"),
@@ -36,18 +38,20 @@ export default function ProfileSettings({ userProfile }: ProfileSettingsProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const form = useForm({
-    initialValues: {
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
     },
-    validate: zodResolver(profileSchema),
   });
+
+  const { formState: { isSubmitting, isDirty } } = form;
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
     try {
       const userDocRef = doc(firestore, "userProfiles", userProfile.id);
-      await setDocumentNonBlocking(userDocRef, {
+      setDocumentNonBlocking(userDocRef, {
         firstName: values.firstName,
         lastName: values.lastName,
         updatedAt: new Date().toISOString(),
@@ -56,6 +60,7 @@ export default function ProfileSettings({ userProfile }: ProfileSettingsProps) {
       toast({
         title: t.success_toast,
       });
+      form.reset(values); // To reset dirty state
     } catch (error) {
       console.error("Profile update failed:", error);
       toast({
@@ -76,36 +81,40 @@ export default function ProfileSettings({ userProfile }: ProfileSettingsProps) {
         <CardDescription>{t.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form onSubmit={form.onSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            name="firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t.first_name_label}</FormLabel>
-                <FormControl>
-                  <Input {...field} {...form.getInputProps("firstName")} />
-                </FormControl>
-                <FormMessage>{form.errors.firstName as React.ReactNode}</FormMessage>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t.last_name_label}</FormLabel>
-                <FormControl>
-                  <Input {...field} {...form.getInputProps("lastName")} />
-                </FormControl>
-                <FormMessage>{form.errors.lastName as React.ReactNode}</FormMessage>
-              </FormItem>
-            )}
-          />
-          <Button type="submit" disabled={!form.isDirty() || !form.isValid()}>
-            {/* We don't have isSubmitting from this form hook, so we just disable if not dirty or invalid */}
-            {t.submit_button}
-          </Button>
-        </form>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.first_name_label}</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.last_name_label}</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? t.submitting_button : t.submit_button}
+            </Button>
+          </form>
+        </Form>
         <Separator />
         <div className="space-y-4">
           <h3 className="text-lg font-medium">{t.picture_title}</h3>
