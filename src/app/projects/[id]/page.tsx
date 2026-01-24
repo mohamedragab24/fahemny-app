@@ -299,7 +299,7 @@ export default function ProjectDetailsPage({
                   <Clock className="h-4 w-4" />
                   <span>
                     {t.deadline}{' '}
-                    {new Date(project.deadline).toLocaleDateString()}
+                    {project.deadline}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

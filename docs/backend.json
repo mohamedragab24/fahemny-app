@@ -82,12 +82,11 @@
         },
         "deadline": {
           "type": "string",
-          "description": "Deadline for project completion.",
-          "format": "date-time"
+          "description": "مدة التسليم للمشروع."
         },
         "status": {
           "type": "string",
-          "description": "Current status of the project (e.g., open, in progress, completed)."
+          "description": "Current status of the project (e.g., open, pending_approval, in_progress, completed, rejected)."
         },
         "tags": {
           "type": "array",

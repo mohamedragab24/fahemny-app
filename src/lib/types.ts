@@ -19,7 +19,7 @@ export type Project = {
   category: string;
   budget: number;
   deadline: string;
-  status: string;
+  status: 'open' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
   tags?: string[];
   imageUrl?: string;
   proposals?: number;

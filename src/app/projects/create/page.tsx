@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -19,11 +18,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -31,9 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 import * as React from "react";
 import ar from "@/locales/ar";
 import { useForm } from "react-hook-form";
@@ -53,7 +45,7 @@ const createProjectSchema = z.object({
   description: z.string().min(10, "يجب أن يكون الوصف 10 أحرف على الأقل"),
   category: z.string().min(1, "الفئة مطلوبة"),
   budget: z.coerce.number().min(1, "الميزانية مطلوبة"),
-  deadline: z.date({ required_error: "الموعد النهائي مطلوب" }),
+  deadline: z.string().min(1, "مدة التسليم مطلوبة"),
   tags: z.string().optional(),
   imageUrl: z.string().url("الرجاء إدخال رابط صورة صالح").optional().or(z.literal('')),
 });
@@ -78,6 +70,7 @@ export default function CreateProjectPage() {
       description: "",
       category: "",
       budget: 0,
+      deadline: "",
       tags: "",
       imageUrl: "",
     },
@@ -92,10 +85,10 @@ export default function CreateProjectPage() {
       description: values.description,
       category: values.category,
       budget: values.budget,
-      deadline: values.deadline.toISOString(),
+      deadline: values.deadline,
       tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : [],
       imageUrl: values.imageUrl,
-      status: 'open',
+      status: 'pending_approval',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -104,8 +97,8 @@ export default function CreateProjectPage() {
     await addDocumentNonBlocking(projectsCollection, projectData);
 
     toast({
-      title: "تم نشر المشروع!",
-      description: "مشروعك الآن مرئي للمستقلين.",
+      title: "تم إرسال المشروع للمراجعة!",
+      description: "سيتم نشر مشروعك بعد موافقة المسؤول.",
     });
 
     router.push('/dashboard');
@@ -243,37 +236,11 @@ export default function CreateProjectPage() {
                 control={form.control}
                 name="deadline"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>{t.deadline_label}</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>{t.deadline_placeholder}</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder={t.deadline_placeholder} {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

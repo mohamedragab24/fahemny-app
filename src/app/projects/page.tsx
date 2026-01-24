@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Project } from '@/lib/types';
 import ProjectCard from '@/components/ProjectCard';
@@ -21,11 +21,11 @@ export default function ProjectsPage() {
   const t = ar.projects_page;
   const tc = ar.create_project.categories;
   const firestore = useFirestore();
-  const projectsRef = useMemoFirebase(
-    () => collection(firestore, 'projects'),
+  const projectsQuery = useMemoFirebase(
+    () => query(collection(firestore, 'projects'), where('status', '==', 'open')),
     [firestore]
   );
-  const { data: projects, isLoading } = useCollection<Project>(projectsRef);
+  const { data: projects, isLoading } = useCollection<Project>(projectsQuery);
 
   return (
     <div className="container mx-auto py-10">
