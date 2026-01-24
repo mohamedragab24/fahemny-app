@@ -121,7 +121,10 @@ service cloud.firestore {
       allow get: if isSignedIn() && (isOfferParticipant(resource.data) || isAdmin());
       allow list: if isSignedIn(); // Allows any signed-in user to potentially list offers, but queries should be secured on the client.
       allow create: if isSignedIn() && request.resource.data.freelancerId == request.auth.uid;
-      allow update: if (isExistingOwner(resource.data.freelancerId) && request.resource.data.freelancerId == resource.data.freelancerId) || isAdmin();
+      allow update: if ( (isOwner(resource.data.freelancerId) || isProjectOwner(resource.data.projectId)) &&
+                       request.resource.data.freelancerId == resource.data.freelancerId &&
+                       request.resource.data.projectId == resource.data.projectId
+                     ) || isAdmin();
       allow delete: if isExistingOwner(resource.data.freelancerId) || isAdmin();
     }
 

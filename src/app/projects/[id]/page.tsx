@@ -24,6 +24,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { CheckCircle, Clock, DollarSign, User, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -81,7 +82,7 @@ function ProjectProposals({ project }: { project: Project }) {
            <p className="text-muted-foreground">{t.no_proposals}</p>
         ) : (
           offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} />
+            <OfferCard key={offer.id} offer={offer} project={project} />
           ))
         )}
       </CardContent>
@@ -89,9 +90,12 @@ function ProjectProposals({ project }: { project: Project }) {
   );
 }
 
-function OfferCard({ offer }: { offer: Offer }) {
+function OfferCard({ offer, project }: { offer: Offer, project: Project }) {
   const t = ar.user_types;
+  const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+
   const freelancerRef = useMemoFirebase(
     () => doc(firestore, 'userProfiles', offer.freelancerId),
     [firestore, offer.freelancerId]
@@ -101,6 +105,18 @@ function OfferCard({ offer }: { offer: Offer }) {
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   }
+
+  const isOwner = user?.uid === project.employerId;
+
+  const handleAcceptOffer = async () => {
+    const offerRef = doc(firestore, 'offers', offer.id);
+    const projectRef = doc(firestore, 'projects', project.id);
+
+    setDocumentNonBlocking(offerRef, { status: 'accepted' }, { merge: true });
+    setDocumentNonBlocking(projectRef, { status: 'in_progress' }, { merge: true });
+
+    toast({ title: ar.project_details.offer_accepted_toast });
+  };
 
   if (isLoading || !freelancer) {
     return (
@@ -115,25 +131,37 @@ function OfferCard({ offer }: { offer: Offer }) {
   }
   
   return (
-     <div className="flex gap-4 p-4 border rounded-lg bg-secondary/30">
-        <Avatar className='h-12 w-12'>
-            <AvatarImage src={freelancer.photoURL} />
-            <AvatarFallback>{getInitials(freelancer.firstName, freelancer.lastName)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-grow">
-            <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                    <p className="font-semibold text-lg">{freelancer.firstName} {freelancer.lastName}</p>
-                    {freelancer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
-                </div>
-                <div className="text-right">
-                    <p className="font-bold text-xl text-primary">${offer.rate}</p>
-                    {offer.createdAt && <p className="text-sm text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</p>}
-                </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{t[freelancer.userType]}</p>
-            <p className="text-muted-foreground mt-4 whitespace-pre-wrap">{offer.description}</p>
+     <div className="flex flex-col gap-4 p-4 border rounded-lg bg-secondary/30">
+        <div className="flex gap-4">
+          <Avatar className='h-12 w-12'>
+              <AvatarImage src={freelancer.photoURL} />
+              <AvatarFallback>{getInitials(freelancer.firstName, freelancer.lastName)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-grow">
+              <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                      <p className="font-semibold text-lg">{freelancer.firstName} {freelancer.lastName}</p>
+                      {freelancer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                  <div className="text-right">
+                      <p className="font-bold text-xl text-primary">${offer.rate}</p>
+                      {offer.createdAt && <p className="text-sm text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</p>}
+                  </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">{t[freelancer.userType]}</p>
+              <p className="text-muted-foreground mt-4 whitespace-pre-wrap">{offer.description}</p>
+          </div>
         </div>
+        {isOwner && (
+          <div className='flex items-center justify-end gap-4 border-t pt-4 mt-4'>
+            {offer.status === 'accepted' ? (
+              <Badge variant="default">{ar.project_details.offer_accepted}</Badge>
+            ) : project.status === 'open' ? (
+              <Button onClick={handleAcceptOffer}>{ar.project_details.accept_offer}</Button>
+            ) : null}
+             <Button variant="outline" asChild><Link href="/messages">إرسال رسالة</Link></Button>
+          </div>
+        )}
     </div>
   )
 }
@@ -249,7 +277,7 @@ function ProposalForm({ project }: { project: Project }) {
       return (
           <Card className='p-6'>
             <CardTitle className='mb-4 font-headline'>تم تقديم عرضك</CardTitle>
-            <OfferCard offer={existingOffers[0]} />
+            <OfferCard offer={existingOffers[0]} project={project} />
         </Card>
       )
   }

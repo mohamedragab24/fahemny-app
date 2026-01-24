@@ -18,55 +18,126 @@ import ProjectCard from "@/components/ProjectCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import ar from "@/locales/ar";
 import ProfileSettings from "@/components/ProfileSettings";
+import { useMemo } from "react";
 
-function MyProjects() {
-    const t = ar.dashboard;
-    const { user } = useUser();
-    const firestore = useFirestore();
-
-    const projectsQuery = useMemoFirebase(
-        () => user ? query(collection(firestore, "projects"), where("employerId", "==", user.uid)) : null,
-        [firestore, user]
-    );
-
-    const { data: projects, isLoading } = useCollection<Project>(projectsQuery);
-
-    if (isLoading) {
-        return (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }).map((_, i) => (
-                    <div key={i} className="flex flex-col space-y-3 p-4 border rounded-lg">
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-12 w-full" />
-                        <div className="flex justify-between items-center pt-4">
-                            <Skeleton className="h-8 w-1/4" />
-                            <Skeleton className="h-10 w-1/3" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        )
-    }
-
+function ProjectsList({ projects, isLoading }: { projects: Project[] | null, isLoading: boolean }) {
+  const t = ar.dashboard;
+  if (isLoading) {
     return (
-        <div>
-            {projects && projects.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {projects.map((project) => (
-                        <ProjectCard key={project.id} project={project} />
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground pt-8 pb-4">
-                    <p>{t.no_projects}</p>
-                    <Button asChild className="mt-4">
-                        <Link href="/projects/create">{t.post_project_button}</Link>
-                    </Button>
-                </div>
-            )}
-        </div>
-    );
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="flex flex-col space-y-3 p-4 border rounded-lg">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-12 w-full" />
+            <div className="flex justify-between items-center pt-4">
+              <Skeleton className="h-8 w-1/4" />
+              <Skeleton className="h-10 w-1/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        <p>{t.no_projects_in_category}</p>
+        <Button asChild className="mt-4">
+            <Link href="/projects/create">{t.post_project_button}</Link>
+        </Button>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {projects.map((project) => (
+        <ProjectCard key={project.id} project={project} />
+      ))}
+    </div>
+  )
+}
+
+function EmployerDashboard() {
+  const t = ar.dashboard;
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const projectsQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, "projects"), where("employerId", "==", user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: allProjects, isLoading } = useCollection<Project>(projectsQuery);
+
+  const projectsByStatus = useMemo(() => {
+    const initial = {
+      open: [],
+      in_progress: [],
+      completed: [],
+    };
+    if (!allProjects) return initial;
+    return allProjects.reduce((acc, project) => {
+      if (acc[project.status as keyof typeof acc]) {
+        acc[project.status as keyof typeof acc].push(project);
+      }
+      return acc;
+    }, initial as Record<string, Project[]>);
+  }, [allProjects]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2">
+        <Tabs defaultValue="open" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="open">{t.active_projects}</TabsTrigger>
+            <TabsTrigger value="in_progress">{t.in_progress_projects}</TabsTrigger>
+            <TabsTrigger value="completed">{t.completed_projects}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="open">
+            <Card>
+              <CardHeader><CardTitle>{t.active_projects}</CardTitle></CardHeader>
+              <CardContent><ProjectsList projects={projectsByStatus.open} isLoading={isLoading} /></CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="in_progress">
+             <Card>
+              <CardHeader><CardTitle>{t.in_progress_projects}</CardTitle></CardHeader>
+              <CardContent><ProjectsList projects={projectsByStatus.in_progress} isLoading={isLoading} /></CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="completed">
+             <Card>
+              <CardHeader><CardTitle>{t.completed_projects}</CardTitle></CardHeader>
+              <CardContent><ProjectsList projects={projectsByStatus.completed} isLoading={isLoading} /></CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      <div className="space-y-6">
+        <WalletCard />
+      </div>
+    </div>
+  )
+}
+
+function WalletCard() {
+    const t = ar.dashboard;
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{t.wallet_title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">{t.current_balance}</p>
+                <p className="text-3xl font-bold">$0.00</p>
+            </CardContent>
+            <CardFooter>
+                <Button disabled>{t.add_funds_button}</Button>
+            </CardFooter>
+        </Card>
+    )
 }
 
 function ProposalCard({ offer }: { offer: Offer }) {
@@ -114,7 +185,7 @@ function ProposalCard({ offer }: { offer: Offer }) {
 }
 
 
-function MyProposals() {
+function FreelancerProposals() {
     const t = ar.dashboard;
     const { user } = useUser();
     const firestore = useFirestore();
@@ -194,41 +265,32 @@ export default function DashboardPage() {
     ? { 
         value: 'projects', 
         label: t.my_projects,
-        Content: <MyProjects />,
-        description: ar.home.features.talent.description
+        Content: <EmployerDashboard />,
       } 
     : { 
         value: 'proposals', 
         label: t.my_proposals,
-        Content: <MyProposals />,
-        description: ar.home.features.find_work.description
+        Content: <FreelancerProposals />,
       };
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-2 font-headline">{t.title}</h1>
-      <p className="text-muted-foreground mb-8">
-        {t.welcome.replace('{firstName}', userProfile.firstName)}
-      </p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold font-headline">{t.title}</h1>
+        <p className="text-muted-foreground">
+          {t.welcome.replace('{firstName}', userProfile.firstName)}
+        </p>
+      </div>
+
 
       <Tabs defaultValue={mainTab.value} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[300px]">
+        <TabsList className="grid w-full grid-cols-2 md:w-[300px] mb-6">
           <TabsTrigger value={mainTab.value}>{mainTab.label}</TabsTrigger>
           <TabsTrigger value="settings">{t.settings}</TabsTrigger>
         </TabsList>
         
         <TabsContent value={mainTab.value}>
-          <Card>
-            <CardHeader>
-              <CardTitle>{mainTab.label}</CardTitle>
-              <CardDescription>
-                {mainTab.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {mainTab.Content}
-            </CardContent>
-          </Card>
+            {mainTab.Content}
         </TabsContent>
 
         <TabsContent value="settings">

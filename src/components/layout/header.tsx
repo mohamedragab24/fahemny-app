@@ -10,6 +10,7 @@ import {
   User,
   LogOut,
   ShieldCheck,
+  LifeBuoy,
 } from "lucide-react";
 import {
   Sheet,
@@ -56,12 +57,14 @@ export default function Header({ translations: t }: { translations: Translations
     { href: "/projects", label: t.links.projects },
     { href: "/dashboard", label: t.links.dashboard },
     { href: "/messages", label: t.links.messages },
+    { href: "/support", label: t.links.support },
   ];
   
   const mobileNavLinks = [
       { href: "/projects", label: t.links.projects, icon: <Briefcase className="h-5 w-5" /> },
       { href: "/dashboard", label: t.links.dashboard, icon: <User className="h-5 w-5" /> },
       { href: "/messages", label: t.links.messages, icon: <MessageSquare className="h-5 w-5" /> },
+      { href: "/support", label: t.links.support, icon: <LifeBuoy className="h-5 w-5" /> },
   ];
 
   const getInitials = (firstName?: string, lastName?: string) => {

@@ -49,12 +49,26 @@ function EmployerDetails({ employerId }: { employerId: string }) {
   );
 }
 
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
+
 export default function ProjectCard({ project }: ProjectCardProps) {
   const t = ar.project_details;
+  const statusMap: Record<string, { text: string; variant: BadgeVariant }> = {
+    open: { text: ar.project_statuses.open, variant: 'secondary' },
+    in_progress: { text: ar.project_statuses.in_progress, variant: 'default' },
+    completed: { text: ar.project_statuses.completed, variant: 'outline' },
+    pending_approval: { text: ar.project_statuses.pending_approval, variant: 'destructive' },
+    rejected: { text: ar.project_statuses.rejected, variant: 'destructive' },
+  };
+  const statusInfo = statusMap[project.status];
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
+        <div className='flex justify-between items-start gap-2'>
+          <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
+          {statusInfo && <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>}
+        </div>
         <CardDescription>
           <EmployerDetails employerId={project.employerId} />
         </CardDescription>

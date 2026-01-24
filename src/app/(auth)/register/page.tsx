@@ -82,10 +82,15 @@ export default function RegisterPage() {
       setDocumentNonBlocking(userDocRef, userProfile, { merge: true });
 
       toast({
-        title: "Account Created!",
-        description: "You have been successfully registered.",
+        title: "تم إنشاء الحساب!",
+        description: "تم تسجيلك بنجاح.",
       });
-      router.push("/dashboard");
+
+      if (values.userType === 'freelancer') {
+        router.push('/projects');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error("Registration failed:", error);
       toast({

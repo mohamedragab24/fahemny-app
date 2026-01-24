@@ -6,6 +6,7 @@ export default {
       dashboard: 'لوحة التحكم',
       messages: 'الرسائل',
       admin_dashboard: 'لوحة تحكم المسؤول',
+      support: 'الدعم الفني',
     },
     auth: {
       login: 'تسجيل الدخول',
@@ -167,6 +168,9 @@ export default {
     deadline: 'مدة التسليم:',
     by_employer: 'بواسطة صاحب عمل',
     view_project: 'عرض المشروع',
+    accept_offer: 'قبول العرض',
+    offer_accepted: 'تم قبول العرض',
+    offer_accepted_toast: 'تم قبول العرض بنجاح!',
   },
   dashboard: {
     title: 'لوحة التحكم الخاصة بي',
@@ -175,6 +179,7 @@ export default {
     my_proposals: 'عروضي',
     settings: 'الإعدادات',
     no_projects: "لم تقم بنشر أي مشاريع بعد.",
+    no_projects_in_category: 'لا توجد مشاريع في هذه الفئة.',
     post_project_button: 'انشر مشروع',
     no_proposals: "لم تقم بتقديم أي عروض بعد.",
     browse_projects_button: 'تصفح المشاريع',
@@ -194,6 +199,13 @@ export default {
       success_toast: 'تم تحديث الملف الشخصي بنجاح.',
       error_toast: 'فشل تحديث الملف الشخصي.',
     },
+    wallet_title: 'المحفظة',
+    current_balance: 'الرصيد الحالي',
+    add_funds_button: 'إضافة رصيد',
+    all_projects: 'كل المشاريع',
+    active_projects: 'المشاريع النشطة',
+    in_progress_projects: 'مشاريع قيد التنفيذ',
+    completed_projects: 'المشاريع المكتملة',
   },
   messages_page: {
     title: 'الرسائل',
@@ -247,5 +259,16 @@ export default {
   user_types: {
     freelancer: 'مستقل',
     employer: 'صاحب عمل',
+  },
+  project_statuses: {
+    open: 'مفتوح',
+    pending_approval: 'بانتظار الموافقة',
+    in_progress: 'قيد التنفيذ',
+    completed: 'مكتمل',
+    rejected: 'مرفوض',
+  },
+  support_page: {
+    title: 'الدعم الفني',
+    description: 'كيف يمكننا مساعدتك اليوم؟ تواصل معنا لأي استفسار.',
   },
 } as const;
