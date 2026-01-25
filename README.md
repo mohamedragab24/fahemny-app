@@ -24,7 +24,6 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
-
 ```
 
 ---
@@ -84,7 +83,10 @@ runConfig:
         "role": {
           "type": "string",
           "description": "The role of the user.",
-          "enum": ["student", "tutor"]
+          "enum": [
+            "student",
+            "tutor"
+          ]
         },
         "rating": {
           "type": "number",
@@ -150,17 +152,26 @@ runConfig:
         "tutorGender": {
           "type": "string",
           "description": "The preferred gender of the tutor.",
-          "enum": ["male", "female", "any"]
+          "enum": [
+            "male",
+            "female",
+            "any"
+          ]
         },
         "status": {
           "type": "string",
           "description": "Current status of the request.",
-          "enum": ["open", "accepted", "completed", "cancelled"]
+          "enum": [
+            "open",
+            "accepted",
+            "completed",
+            "cancelled"
+          ]
         },
         "meetingLink": {
-            "type": "string",
-            "description": "The Zoom/Meet link for the session, provided by the tutor.",
-            "format": "uri"
+          "type": "string",
+          "description": "The Zoom/Meet link for the session, provided by the tutor.",
+          "format": "uri"
         },
         "createdAt": {
           "type": "string",
@@ -447,9 +458,9 @@ export const createZoomMeetingFlow = ai.defineFlow(
   async (input) => {
     const { topic, startTime } = input;
     
-    const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
-    const zoomClientId = process.env.ZOOM_CLIENT_ID;
-    const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+    const zoomAccountId = "8440510367";
+    const zoomClientId = "YshofWq8R9KAI6MJYaPig";
+    const zoomClientSecret = "q1kJ1Tjacg3nA2dRRInS4xuYvX2H2F3e";
 
     if (!zoomAccountId || !zoomClientId || !zoomClientSecret) {
       throw new Error('Zoom environment variables are not set. Please check your .env.local file.');
@@ -1941,250 +1952,6 @@ export default function LanguageSwitcher() {
 
 ---
 
-## File: `src/components/ProfileSettings.tsx`
-
-```typescript
-"use client";
-
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { UserProfile } from "@/lib/types";
-import { useFirestore } from "@/firebase";
-import { doc } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { useToast } from "@/hooks/use-toast";
-import ar from "@/locales/ar";
-import { Loader2 } from "lucide-react";
-
-const profileSchema = z.object({
-  firstName: z.string().min(1, "الاسم الأول مطلوب"),
-  lastName: z.string().min(1, "اسم العائلة مطلوب"),
-});
-
-interface ProfileSettingsProps {
-  userProfile: UserProfile;
-}
-
-export default function ProfileSettings({ userProfile }: ProfileSettingsProps) {
-  const t = ar.dashboard.profile_settings;
-  const firestore = useFirestore();
-  const { toast } = useToast();
-
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      firstName: userProfile.firstName,
-      lastName: userProfile.lastName,
-    },
-  });
-
-  const { formState: { isSubmitting, isDirty } } = form;
-
-  async function onSubmit(values: z.infer<typeof profileSchema>) {
-    try {
-      const userDocRef = doc(firestore, "userProfiles", userProfile.id);
-      setDocumentNonBlocking(userDocRef, {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
-
-      toast({
-        title: t.success_toast,
-      });
-      form.reset(values); // To reset dirty state
-    } catch (error) {
-      console.error("Profile update failed:", error);
-      toast({
-        variant: "destructive",
-        title: t.error_toast,
-      });
-    }
-  }
-  
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t.first_name_label}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t.last_name_label}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isSubmitting || !isDirty}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? t.submitting_button : t.submit_button}
-            </Button>
-          </form>
-        </Form>
-        <Separator />
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">{t.picture_title}</h3>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={userProfile.photoURL} />
-              <AvatarFallback>{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
-            </Avatar>
-            <Button variant="outline">{t.change_picture_button}</Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
----
-
-## File: `src/components/ProjectCard.tsx`
-
-```typescript
-'use client';
-
-import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { CheckCircle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Project, UserProfile } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import ar from '@/locales/ar';
-
-interface ProjectCardProps {
-  project: Project;
-}
-
-function EmployerDetails({ employerId }: { employerId: string }) {
-  const t = ar.project_details;
-  const firestore = useFirestore();
-  const employerRef = useMemoFirebase(
-    () => (employerId ? doc(firestore, 'userProfiles', employerId) : null),
-    [firestore, employerId]
-  );
-  const { data: employer, isLoading } = useDoc<UserProfile>(employerRef);
-
-  if (isLoading) {
-    return <Skeleton className="h-5 w-32 mt-2" />;
-  }
-
-  if (!employer) {
-    return <span className="text-sm text-muted-foreground">{t.by_employer}</span>;
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-2">
-      <span className="text-sm text-muted-foreground">
-        بواسطة {employer.firstName} {employer.lastName}
-      </span>
-      {employer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
-    </div>
-  );
-}
-
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
-
-export default function ProjectCard({ project }: ProjectCardProps) {
-  const t = ar.project_details;
-  const statusMap: Record<string, { text: string; variant: BadgeVariant }> = {
-    open: { text: ar.project_statuses.open, variant: 'secondary' },
-    in_progress: { text: ar.project_statuses.in_progress, variant: 'default' },
-    completed: { text: ar.project_statuses.completed, variant: 'outline' },
-    pending_approval: { text: ar.project_statuses.pending_approval, variant: 'destructive' },
-    rejected: { text: ar.project_statuses.rejected, variant: 'destructive' },
-  };
-  const statusInfo = statusMap[project.status];
-
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className='flex justify-between items-start gap-2'>
-          <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
-          {statusInfo && <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>}
-        </div>
-        <CardDescription>
-          <EmployerDetails employerId={project.employerId} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        <p className="text-muted-foreground line-clamp-3">
-          {project.description}
-        </p>
-        {project.tags && project.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {project.tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between items-center">
-        <div className="font-bold text-primary">${project.budget}</div>
-        <Link href={`/projects/${project.id}`}>
-          <Button>{t.view_project}</Button>
-        </Link>
-      </CardFooter>
-    </Card>
-  );
-}
-```
-
----
-
 ## File: `src/components/layout/footer.tsx`
 
 ```typescript
@@ -2440,6 +2207,1174 @@ export default function Header({ translations: t }: { translations: Translations
 }
 ```
 
-... and so on for all UI components, firebase setup, hooks, libs, and config files. Due to the enormous size, the rest of the files are omitted from this view, but they are included in the change.
- 
+---
+
+## File: `src/firebase/client-provider.tsx`
+
+```typescript
+'use client';
+
+import React, { useMemo, type ReactNode } from 'react';
+import { FirebaseProvider } from '@/firebase/provider';
+import { initializeFirebase } from '@/firebase';
+
+interface FirebaseClientProviderProps {
+  children: ReactNode;
+}
+
+export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
+  const firebaseServices = useMemo(() => {
+    // Initialize Firebase on the client side, once per component mount.
+    return initializeFirebase();
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  return (
+    <FirebaseProvider
+      firebaseApp={firebaseServices.firebaseApp}
+      auth={firebaseServices.auth}
+      firestore={firebaseServices.firestore}
+    >
+      {children}
+    </FirebaseProvider>
+  );
+}
+```
+
+---
+
+## File: `src/firebase/config.ts`
+
+```typescript
+export const firebaseConfig = {
+  "projectId": "studio-8970456661-3cf22",
+  "appId": "1:399470060434:web:8dc2e23420f384b861174b",
+  "apiKey": "AIzaSyDWooYm4g3_NszlissiNj36YZMwqE14zNs",
+  "authDomain": "studio-8970456661-3cf22.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "399470060434"
+};
+```
+
+---
+
+## File: `src/firebase/error-emitter.ts`
+
+```typescript
+'use client';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+/**
+ * Defines the shape of all possible events and their corresponding payload types.
+ * This centralizes event definitions for type safety across the application.
+ */
+export interface AppEvents {
+  'permission-error': FirestorePermissionError;
+}
+
+// A generic type for a callback function.
+type Callback<T> = (data: T) => void;
+
+/**
+ * A strongly-typed pub/sub event emitter.
+ * It uses a generic type T that extends a record of event names to payload types.
+ */
+function createEventEmitter<T extends Record<string, any>>() {
+  // The events object stores arrays of callbacks, keyed by event name.
+  // The types ensure that a callback for a specific event matches its payload type.
+  const events: { [K in keyof T]?: Array<Callback<T[K]>> } = {};
+
+  return {
+    /**
+     * Subscribe to an event.
+     * @param eventName The name of the event to subscribe to.
+     * @param callback The function to call when the event is emitted.
+     */
+    on<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
+      if (!events[eventName]) {
+        events[eventName] = [];
+      }
+      events[eventName]?.push(callback);
+    },
+
+    /**
+     * Unsubscribe from an event.
+     * @param eventName The name of the event to unsubscribe from.
+     * @param callback The specific callback to remove.
+     */
+    off<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
+      if (!events[eventName]) {
+        return;
+      }
+      events[eventName] = events[eventName]?.filter(cb => cb !== callback);
+    },
+
+    /**
+     * Publish an event to all subscribers.
+     * @param eventName The name of the event to emit.
+     * @param data The data payload that corresponds to the event's type.
+     */
+    emit<K extends keyof T>(eventName: K, data: T[K]) {
+      if (!events[eventName]) {
+        return;
+      }
+      events[eventName]?.forEach(callback => callback(data));
+    },
+  };
+}
+
+// Create and export a singleton instance of the emitter, typed with our AppEvents interface.
+export const errorEmitter = createEventEmitter<AppEvents>();
+```
+
+---
+
+## File: `src/firebase/errors.ts`
+
+```typescript
+'use client';
+import { getAuth, type User } from 'firebase/auth';
+
+type SecurityRuleContext = {
+  path: string;
+  operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
+  requestResourceData?: any;
+};
+
+interface FirebaseAuthToken {
+  name: string | null;
+  email: string | null;
+  email_verified: boolean;
+  phone_number: string | null;
+  sub: string;
+  firebase: {
+    identities: Record<string, string[]>;
+    sign_in_provider: string;
+    tenant: string | null;
+  };
+}
+
+interface FirebaseAuthObject {
+  uid: string;
+  token: FirebaseAuthToken;
+}
+
+interface SecurityRuleRequest {
+  auth: FirebaseAuthObject | null;
+  method: string;
+  path: string;
+  resource?: {
+    data: any;
+  };
+}
+
+/**
+ * Builds a security-rule-compliant auth object from the Firebase User.
+ * @param currentUser The currently authenticated Firebase user.
+ * @returns An object that mirrors request.auth in security rules, or null.
+ */
+function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
+  if (!currentUser) {
+    return null;
+  }
+
+  const token: FirebaseAuthToken = {
+    name: currentUser.displayName,
+    email: currentUser.email,
+    email_verified: currentUser.emailVerified,
+    phone_number: currentUser.phoneNumber,
+    sub: currentUser.uid,
+    firebase: {
+      identities: currentUser.providerData.reduce((acc, p) => {
+        if (p.providerId) {
+          acc[p.providerId] = [p.uid];
+        }
+        return acc;
+      }, {} as Record<string, string[]>),
+      sign_in_provider: currentUser.providerData[0]?.providerId || 'custom',
+      tenant: currentUser.tenantId,
+    },
+  };
+
+  return {
+    uid: currentUser.uid,
+    token: token,
+  };
+}
+
+/**
+ * Builds the complete, simulated request object for the error message.
+ * It safely tries to get the current authenticated user.
+ * @param context The context of the failed Firestore operation.
+ * @returns A structured request object.
+ */
+function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
+  let authObject: FirebaseAuthObject | null = null;
+  try {
+    // Safely attempt to get the current user.
+    const firebaseAuth = getAuth();
+    const currentUser = firebaseAuth.currentUser;
+    if (currentUser) {
+      authObject = buildAuthObject(currentUser);
+    }
+  } catch {
+    // This will catch errors if the Firebase app is not yet initialized.
+    // In this case, we'll proceed without auth information.
+  }
+
+  return {
+    auth: authObject,
+    method: context.operation,
+    path: `/databases/(default)/documents/${context.path}`,
+    resource: context.requestResourceData ? { data: context.requestResourceData } : undefined,
+  };
+}
+
+/**
+ * Builds the final, formatted error message for the LLM.
+ * @param requestObject The simulated request object.
+ * @returns A string containing the error message and the JSON payload.
+ */
+function buildErrorMessage(requestObject: SecurityRuleRequest): string {
+  return `Missing or insufficient permissions: The following request was denied by Firestore Security Rules:
+${JSON.stringify(requestObject, null, 2)}`;
+}
+
+/**
+ * A custom error class designed to be consumed by an LLM for debugging.
+ * It structures the error information to mimic the request object
+ * available in Firestore Security Rules.
+ */
+export class FirestorePermissionError extends Error {
+  public readonly request: SecurityRuleRequest;
+
+  constructor(context: SecurityRuleContext) {
+    const requestObject = buildRequestObject(context);
+    super(buildErrorMessage(requestObject));
+    this.name = 'FirebaseError';
+    this.request = requestObject;
+  }
+}
+```
+
+---
+
+## File: `src/firebase/firestore/use-collection.tsx`
+
+```typescript
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Query,
+  onSnapshot,
+  DocumentData,
+  FirestoreError,
+  QuerySnapshot,
+  CollectionReference,
+} from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+/** Utility type to add an 'id' field to a given type T. */
+export type WithId<T> = T & { id: string };
+
+/**
+ * Interface for the return value of the useCollection hook.
+ * @template T Type of the document data.
+ */
+export interface UseCollectionResult<T> {
+  data: WithId<T>[] | null; // Document data with ID, or null.
+  isLoading: boolean;       // True if loading.
+  error: FirestoreError | Error | null; // Error object, or null.
+}
+
+/* Internal implementation of Query:
+  https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
+*/
+export interface InternalQuery extends Query<DocumentData> {
+  _query: {
+    path: {
+      canonicalString(): string;
+      toString(): string;
+    }
+  }
+}
+
+/**
+ * React hook to subscribe to a Firestore collection or query in real-time.
+ * Handles nullable references/queries.
+ * 
+ *
+ * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
+ * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
+ * references
+ *  
+ * @template T Optional type for document data. Defaults to any.
+ * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
+ * The Firestore CollectionReference or Query. Waits if null/undefined.
+ * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
+ */
+export function useCollection<T = any>(
+    memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+): UseCollectionResult<T> {
+  type ResultItemType = WithId<T>;
+  type StateDataType = ResultItemType[] | null;
+
+  const [data, setData] = useState<StateDataType>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  useEffect(() => {
+    if (!memoizedTargetRefOrQuery) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
+    const unsubscribe = onSnapshot(
+      memoizedTargetRefOrQuery,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const results: ResultItemType[] = [];
+        for (const doc of snapshot.docs) {
+          results.push({ ...(doc.data() as T), id: doc.id });
+        }
+        setData(results);
+        setError(null);
+        setIsLoading(false);
+      },
+      (error: FirestoreError) => {
+        // This logic extracts the path from either a ref or a query
+        const path: string =
+          memoizedTargetRefOrQuery.type === 'collection'
+            ? (memoizedTargetRefOrQuery as CollectionReference).path
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+
+        const contextualError = new FirestorePermissionError({
+          operation: 'list',
+          path,
+        })
+
+        setError(contextualError)
+        setData(null)
+        setIsLoading(false)
+
+        // trigger global error propagation
+        errorEmitter.emit('permission-error', contextualError);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
+    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+  }
+  return { data, isLoading, error };
+}
+```
+
+---
+
+## File: `src/firebase/firestore/use-doc.tsx`
+
+```typescript
+'use client';
     
+import { useState, useEffect } from 'react';
+import {
+  DocumentReference,
+  onSnapshot,
+  DocumentData,
+  FirestoreError,
+  DocumentSnapshot,
+} from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+/** Utility type to add an 'id' field to a given type T. */
+type WithId<T> = T & { id: string };
+
+/**
+ * Interface for the return value of the useDoc hook.
+ * @template T Type of the document data.
+ */
+export interface UseDocResult<T> {
+  data: WithId<T> | null; // Document data with ID, or null.
+  isLoading: boolean;       // True if loading.
+  error: FirestoreError | Error | null; // Error object, or null.
+}
+
+/**
+ * React hook to subscribe to a single Firestore document in real-time.
+ * Handles nullable references.
+ * 
+ * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
+ * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
+ * references
+ *
+ *
+ * @template T Optional type for document data. Defaults to any.
+ * @param {DocumentReference<DocumentData> | null | undefined} docRef -
+ * The Firestore DocumentReference. Waits if null/undefined.
+ * @returns {UseDocResult<T>} Object with data, isLoading, error.
+ */
+export function useDoc<T = any>(
+  memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+): UseDocResult<T> {
+  type StateDataType = WithId<T> | null;
+
+  const [data, setData] = useState<StateDataType>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  useEffect(() => {
+    if (!memoizedDocRef) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    // Optional: setData(null); // Clear previous data instantly
+
+    const unsubscribe = onSnapshot(
+      memoizedDocRef,
+      (snapshot: DocumentSnapshot<DocumentData>) => {
+        if (snapshot.exists()) {
+          setData({ ...(snapshot.data() as T), id: snapshot.id });
+        } else {
+          // Document does not exist
+          setData(null);
+        }
+        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
+        setIsLoading(false);
+      },
+      (error: FirestoreError) => {
+        const contextualError = new FirestorePermissionError({
+          operation: 'get',
+          path: memoizedDocRef.path,
+        })
+
+        setError(contextualError)
+        setData(null)
+        setIsLoading(false)
+
+        // trigger global error propagation
+        errorEmitter.emit('permission-error', contextualError);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+
+  return { data, isLoading, error };
+}
+```
+
+---
+
+## File: `src/firebase/index.ts`
+
+```typescript
+'use client';
+
+import { firebaseConfig } from '@/firebase/config';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore'
+
+// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+export function initializeFirebase() {
+  if (!getApps().length) {
+    // Important! initializeApp() is called without any arguments because Firebase App Hosting
+    // integrates with the initializeApp() function to provide the environment variables needed to
+    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
+    // without arguments.
+    let firebaseApp;
+    try {
+      // Attempt to initialize via Firebase App Hosting environment variables
+      firebaseApp = initializeApp();
+    } catch (e) {
+      // Only warn in production because it's normal to use the firebaseConfig to initialize
+      // during development
+      if (process.env.NODE_ENV === "production") {
+        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+      }
+      firebaseApp = initializeApp(firebaseConfig);
+    }
+
+    return getSdks(firebaseApp);
+  }
+
+  // If already initialized, return the SDKs with the already initialized App
+  return getSdks(getApp());
+}
+
+export function getSdks(firebaseApp: FirebaseApp) {
+  return {
+    firebaseApp,
+    auth: getAuth(firebaseApp),
+    firestore: getFirestore(firebaseApp)
+  };
+}
+
+export * from './provider';
+export * from './client-provider';
+export * from './firestore/use-collection';
+export * from './firestore/use-doc';
+export * from './errors';
+export * from './error-emitter';
+```
+
+---
+
+## File: `src/firebase/non-blocking-updates.tsx`
+
+```typescript
+'use client';
+    
+import {
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  CollectionReference,
+  DocumentReference,
+  SetOptions,
+} from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import {FirestorePermissionError} from '@/firebase/errors';
+
+/**
+ * Initiates a setDoc operation for a document reference.
+ * Does NOT await the write operation internally.
+ */
+export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
+  const operation = options && 'merge' in options ? 'update' : 'create';
+  setDoc(docRef, data, options || {}).catch(error => {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: docRef.path,
+        operation: operation,
+        requestResourceData: data,
+      })
+    )
+  })
+  // Execution continues immediately
+}
+
+
+/**
+ * Initiates an addDoc operation for a collection reference.
+ * Does NOT await the write operation internally.
+ * Returns the Promise for the new doc ref, but typically not awaited by caller.
+ */
+export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
+  const promise = addDoc(colRef, data)
+    .catch(error => {
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: colRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        })
+      )
+    });
+  return promise;
+}
+
+
+/**
+ * Initiates an updateDoc operation for a document reference.
+ * Does NOT await the write operation internally.
+ */
+export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
+  updateDoc(docRef, data)
+    .catch(error => {
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
+          requestResourceData: data,
+        })
+      )
+    });
+}
+
+
+/**
+ * Initiates a deleteDoc operation for a document reference.
+ * Does NOT await the write operation internally.
+ */
+export function deleteDocumentNonBlocking(docRef: DocumentReference) {
+  deleteDoc(docRef)
+    .catch(error => {
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        })
+      )
+    });
+}
+```
+
+---
+
+## File: `src/firebase/provider.tsx`
+
+```typescript
+'use client';
+
+import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import { FirebaseApp } from 'firebase/app';
+import { Firestore } from 'firebase/firestore';
+import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+
+interface FirebaseProviderProps {
+  children: ReactNode;
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
+}
+
+// Internal state for user authentication
+interface UserAuthState {
+  user: User | null;
+  isUserLoading: boolean;
+  userError: Error | null;
+}
+
+// Combined state for the Firebase context
+export interface FirebaseContextState {
+  areServicesAvailable: boolean; // True if core services (app, firestore, auth instance) are provided
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null; // The Auth service instance
+  // User authentication state
+  user: User | null;
+  isUserLoading: boolean; // True during initial auth check
+  userError: Error | null; // Error from auth listener
+}
+
+// Return type for useFirebase()
+export interface FirebaseServicesAndUser {
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
+  user: User | null;
+  isUserLoading: boolean;
+  userError: Error | null;
+}
+
+// Return type for useUser() - specific to user auth state
+export interface UserHookResult { // Renamed from UserAuthHookResult for consistency if desired, or keep as UserAuthHookResult
+  user: User | null;
+  isUserLoading: boolean;
+  userError: Error | null;
+}
+
+// React Context
+export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
+
+/**
+ * FirebaseProvider manages and provides Firebase services and user authentication state.
+ */
+export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
+  children,
+  firebaseApp,
+  firestore,
+  auth,
+}) => {
+  const [userAuthState, setUserAuthState] = useState<UserAuthState>({
+    user: null,
+    isUserLoading: true, // Start loading until first auth event
+    userError: null,
+  });
+
+  // Effect to subscribe to Firebase auth state changes
+  useEffect(() => {
+    if (!auth) { // If no Auth service instance, cannot determine user state
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      return;
+    }
+
+    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser) => { // Auth state determined
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+      },
+      (error) => { // Auth listener error
+        console.error("FirebaseProvider: onAuthStateChanged error:", error);
+        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      }
+    );
+    return () => unsubscribe(); // Cleanup
+  }, [auth]); // Depends on the auth instance
+
+  // Memoize the context value
+  const contextValue = useMemo((): FirebaseContextState => {
+    const servicesAvailable = !!(firebaseApp && firestore && auth);
+    return {
+      areServicesAvailable: servicesAvailable,
+      firebaseApp: servicesAvailable ? firebaseApp : null,
+      firestore: servicesAvailable ? firestore : null,
+      auth: servicesAvailable ? auth : null,
+      user: userAuthState.user,
+      isUserLoading: userAuthState.isUserLoading,
+      userError: userAuthState.userError,
+    };
+  }, [firebaseApp, firestore, auth, userAuthState]);
+
+  return (
+    <FirebaseContext.Provider value={contextValue}>
+      <FirebaseErrorListener />
+      {children}
+    </FirebaseContext.Provider>
+  );
+};
+
+/**
+ * Hook to access core Firebase services and user authentication state.
+ * Throws error if core services are not available or used outside provider.
+ */
+export const useFirebase = (): FirebaseServicesAndUser => {
+  const context = useContext(FirebaseContext);
+
+  if (context === undefined) {
+    throw new Error('useFirebase must be used within a FirebaseProvider.');
+  }
+
+  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
+    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
+  }
+
+  return {
+    firebaseApp: context.firebaseApp,
+    firestore: context.firestore,
+    auth: context.auth,
+    user: context.user,
+    isUserLoading: context.isUserLoading,
+    userError: context.userError,
+  };
+};
+
+/** Hook to access Firebase Auth instance. */
+export const useAuth = (): Auth => {
+  const { auth } = useFirebase();
+  return auth;
+};
+
+/** Hook to access Firestore instance. */
+export const useFirestore = (): Firestore => {
+  const { firestore } = useFirebase();
+  return firestore;
+};
+
+/** Hook to access Firebase App instance. */
+export const useFirebaseApp = (): FirebaseApp => {
+  const { firebaseApp } = useFirebase();
+  return firebaseApp;
+};
+
+type MemoFirebase <T> = T & {__memo?: boolean};
+
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+  const memoized = useMemo(factory, deps);
+  
+  if(typeof memoized !== 'object' || memoized === null) return memoized;
+  (memoized as MemoFirebase<T>).__memo = true;
+  
+  return memoized;
+}
+
+/**
+ * Hook specifically for accessing the authenticated user's state.
+ * This provides the User object, loading status, and any auth errors.
+ * @returns {UserHookResult} Object with user, isUserLoading, userError.
+ */
+export const useUser = (): UserHookResult => { // Renamed from useAuthUser
+  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
+  return { user, isUserLoading, userError };
+};
+```
+
+---
+
+## File: `src/lib/types.ts`
+
+```typescript
+export type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  role?: 'student' | 'tutor';
+  photoURL?: string;
+  rating?: number;
+  isVerified?: boolean;
+  isAdmin?: boolean;
+  createdAt: string;
+};
+
+export type SessionRequest = {
+  id: string;
+  studentId: string;
+  tutorId?: string;
+  title: string;
+  field: string;
+  description: string;
+  price: number;
+  sessionDate: string;
+  sessionTime: string;
+  tutorGender: 'male' | 'female' | 'any';
+  status: 'open' | 'accepted' | 'completed' | 'cancelled';
+  meetingLink?: string;
+  createdAt: string;
+};
+```
+
+---
+
+## File: `src/lib/utils.ts`
+
+```typescript
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+---
+
+## File: `src/locales/ar.ts`
+
+```typescript
+export default {
+  header: {
+    title: 'فَهِّمْني',
+    links: {
+      browse_requests: 'تصفح الطلبات',
+      create_request: 'اطلب شرح',
+      my_sessions: 'جلساتي',
+      wallet: 'المحفظة',
+      support: 'الدعم',
+      admin_dashboard: 'لوحة التحكم',
+    },
+    auth: {
+      login: 'تسجيل الدخول',
+      signup: 'إنشاء حساب',
+      logout: 'تسجيل الخروج',
+    },
+    userMenu: {
+      profile: 'ملفي الشخصي',
+    },
+    mobile: {
+      toggle: 'فتح القائمة',
+      title: 'القائمة الرئيسية',
+    }
+  },
+  footer: {
+    about: 'عن فَهِّمْني',
+    contact: 'اتصل بنا',
+    terms: 'شروط الخدمة',
+    privacy: 'سياسة الخصوصية',
+    rights: 'جميع الحقوق محفوظة.',
+  },
+  home: {
+    hero: {
+      title: 'مش فاهم حاجة؟ محتاج حد يفهمك؟',
+      subtitle: 'جلسة واحدة... حل واحد... من داخل منصة آمنة.',
+      cta_student: 'ابدأ كـ مستفهم',
+      cta_tutor: 'انضم كمفهّم',
+    },
+    how_it_works: {
+      heading: 'آلية العمل',
+      title: 'كيف يعمل؟',
+      steps: [
+        'اطلب اللي محتاج تفهمه.',
+        'اختر السعر.',
+        'قابل مفهّم مناسب.',
+        'جلسة فيديو + شير سكرين.',
+        'قيّم التجربة.',
+      ],
+    },
+    why_fahemny: {
+      heading: 'لماذا فَهِّمْني؟',
+      title: 'لماذا تختار فَهِّمْني؟',
+      features: [
+        'دفع آمن داخل المنصة.',
+        'لا تواصل خارجي.',
+        'تسجيل الجلسات.',
+        'استرداد مضمون.',
+      ],
+    },
+    about: {
+      heading: 'عن المنصة',
+      vision_title: 'رؤية المنصة',
+      vision_description: 'أن تصبح "فَهِّمْني" المنصة العربية الأولى للاستفهام والتفهيم السريع، بديلاً آمناً ومنظماً للتواصل العشوائي خارج المنصات.',
+      mission_title: 'رسالة المنصة',
+      mission_description: 'تسهيل الوصول للمعرفة العملية، ضمان حقوق جميع الأطراف، وخلق بيئة عادلة وشفافة للدخل القائم على الخبرة.',
+    },
+    workflow: {
+      heading: 'آلية العمل داخل المنصة',
+      title: 'بأربع خطوات بسيطة',
+      create_request: {
+        title: 'أنشئ طلبك',
+        description: 'يشمل: عنوان مختصر + المجال، تفاصيل دقيقة، الموعد، الجنس، والسعر.',
+      },
+      view_and_accept: {
+        title: 'قبول الطلب',
+        description: 'يقبل المفهّم الطلب ويحدد رابط الجلسة.',
+      },
+      pay_and_session: {
+        title: 'الدفع والجلسة',
+        description: 'يتم الدفع مسبقًا وحجز المبلغ، ثم تبدأ الجلسة المسجلة بالفيديو.',
+      },
+      feedback: {
+        title: 'الإنهاء والتقييم',
+        description: 'نجاح الجلسة يعني تحويل 80% للمفهّم. عدم تحقيق المطلوب يضمن استرداد المبلغ أو إعادة الجلسة.',
+      },
+    },
+    fields: {
+      heading: 'المجالات',
+      allowed_title: 'أمثلة للمجالات المسموح بها',
+      allowed_examples: [
+        'شرح دروس أو جزئيات تعليمية.',
+        'مهارات تقنية (تطبيقات، ذكاء اصطناعي، تعديل فيديو، تصميم).',
+        'مهارات يدوية أو منزلية.',
+        'خطوات تنفيذ مهمة معينة.',
+      ],
+      forbidden_title: 'المجالات الممنوعة',
+      forbidden_examples: [
+        'الفتاوى أو الاستشارات الدينية (ما عدا علوم القرآن والتجويد).',
+        'أي محتوى سياسي.',
+        'استشارات طبية مباشرة يترتب عليها علاج.',
+        'استشارات قانونية مباشرة يترتب عليها إجراء.',
+        'أي محتوى مخالف للشرع أو به شبهة.',
+        'أي محتوى مخالف للقانون.',
+      ],
+    },
+    payment: {
+      heading: 'نظام الدفع والعمولة',
+      title: 'نظام آمن وعادل للجميع',
+      price: {
+        title: 'تحديد السعر',
+        description: 'السعر يحدده المستفهم عند إنشاء الطلب (الحد الأدنى 50 جنيهًا مصريًا).',
+      },
+      commission: {
+        title: 'العمولة',
+        description: 'يحصل المفهّم على 80% من قيمة الجلسة، وتحصل المنصة على 20% عمولة تنظيم وحماية.',
+      },
+      methods: {
+        title: 'وسائل الدفع',
+        description: 'ادفع بأمان وسهولة عبر وسائل دفع متنوعة مثل Instapay و Vodafone Cash وغيرها.',
+      },
+    },
+    cta: {
+      title: 'جاهز تفهم؟ أو تفهّم؟',
+      subtitle: 'انضم لمجتمعنا الآن وابدأ رحلتك في عالم المعرفة.',
+      signup_button: 'أنشئ حسابًا مجانيًا',
+    },
+  },
+  login: {
+    title: 'أهلاً بعودتك',
+    description: 'سجل دخولك للمتابعة',
+    email_label: 'البريد الإلكتروني',
+    email_placeholder: 'email@example.com',
+    password_label: 'كلمة المرور',
+    submit_button: 'تسجيل الدخول',
+    submitting_button: 'جارٍ الدخول...',
+    signup_link_text: 'ليس لديك حساب؟',
+    signup_link: 'أنشئ حسابًا',
+  },
+  register: {
+    title: 'أنشئ حسابًا جديدًا',
+    description: 'خطوات بسيطة تفصلك عن عالم من المعرفة.',
+    name_label: 'الاسم الكامل',
+    name_placeholder: 'مثال: محمد أحمد',
+    email_label: 'البريد الإلكتروني',
+    email_placeholder: 'email@example.com',
+    password_label: 'كلمة المرور',
+    submit_button: 'إنشاء حساب',
+    submitting_button: 'جارٍ الإنشاء...',
+    login_link_text: 'لديك حساب بالفعل؟',
+    login_link: 'سجل الدخول',
+  },
+  select_role: {
+    title: 'اختر دورك',
+    description: 'حدد كيف ستستخدم فَهِّمْني. يمكنك تغيير هذا لاحقًا.',
+    student: {
+      title: 'أنا مستفهم',
+      description: 'أريد أن أطلب شرحًا لمواضيع مختلفة.',
+    },
+    tutor: {
+      title: 'أنا مفهّم',
+      description: 'أريد أن أقدم شروحات وأكسب المال.',
+    },
+    submit_button: 'تأكيد',
+  },
+  terms: {
+    title: 'الشروط والأحكام',
+    description: 'باستخدامك لمنصة "فَهِّمْني"، فإنك توافق على الشروط التالية:',
+    points: [
+      'المنصة وسيط ولا تتحمل محتوى الشرح.',
+      'يُمنع التواصل أو الدفع خارج المنصة.',
+      'تسجيل الجلسات إلزامي.',
+      'للمستفهم حق الاسترداد عند عدم تحقيق المطلوب.',
+      'للمنصة حق إيقاف أي حساب مخالف.',
+      'الالتزام بالمجالات المسموح بها شرط أساسي.',
+    ]
+  },
+} as const;
+```
+
+---
+
+## File: `tailwind.config.ts`
+
+```typescript
+import type { Config } from "tailwindcss";
+
+const { fontFamily } = require("tailwindcss/defaultTheme")
+
+const config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
+  prefix: "",
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)", ...fontFamily.sans],
+        headline: ["var(--font-space-grotesk)", ...fontFamily.sans],
+      },
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        chart: {
+          '1': 'hsl(var(--chart-1))',
+          '2': 'hsl(var(--chart-2))',
+          '3': 'hsl(var(--chart-3))',
+          '4': 'hsl(var(--chart-4))',
+          '5': 'hsl(var(--chart-5))',
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config;
+
+export default config;
+```
+
+---
+
+## File: `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+(لاحظ أن ملفات واجهة المستخدم UI Components مثل `button.tsx`, `card.tsx` ইত্যাদি لم أدرجها هنا للاختصار، لكنها موجودة في المشروع ويمكن نسخها من المرات السابقة إذا لزم الأمر.)
