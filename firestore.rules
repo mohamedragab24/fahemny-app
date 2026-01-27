@@ -79,18 +79,20 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-        allow get: if isSignedInAndActive() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        // A user can only list their own transactions. The `isOwner` check is valid for list rules.
-        allow list: if isAuth() && isOwner(resource.data.userId);
+        // Allow user to read (get/list) their own transactions. This rule is query-safe.
+        allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+        // Also allow admins to get a single transaction document.
+        allow get: if isAdmin(request.auth.uid);
         
         allow create: if isSignedInAndActive() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow get: if isSignedInAndActive() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-      // A user can only list their own notifications. This rule is safe for list operations.
-      allow list: if isAuth() && isOwner(resource.data.userId);
+      // Allow user to read (get/list) their own notifications. This rule is query-safe.
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Also allow admins to get a single notification document.
+      allow get: if isAdmin(request.auth.uid);
       
       allow update: if isSignedInAndActive() && isOwner(resource.data.userId);
       allow create: if isAuth(); // Should be locked down to backend functions/admins
