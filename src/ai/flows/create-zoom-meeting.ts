@@ -20,12 +20,13 @@ export const createZoomMeetingFlow = ai.defineFlow(
   async (input) => {
     const { topic, startTime } = input;
     
-    const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
-    const zoomClientId = process.env.ZOOM_CLIENT_ID;
-    const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+    // Hardcoded credentials for reliability in this development environment.
+    const zoomAccountId = "8440510367";
+    const zoomClientId = "YshofWq8R9KAI6MJYaPig";
+    const zoomClientSecret = "q1kJ1Tjacg3nA2dRRInS4xuYvX2H2F3e";
 
     if (!zoomAccountId || !zoomClientId || !zoomClientSecret) {
-      throw new Error('Zoom environment variables are not set. Please check your environment configuration.');
+      throw new Error('Zoom API credentials are not set directly in the code. Please check src/ai/flows/create-zoom-meeting.ts.');
     }
 
     // 1. Get Access Token
