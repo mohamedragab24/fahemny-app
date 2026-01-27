@@ -47,14 +47,11 @@ service cloud.firestore {
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
       allow update: if isSignedIn() && (
-        // 1. A tutor accepts an open request.
+        // 1. A tutor accepts an open request. (SIMPLIFIED)
         (
             isTutor(request.auth.uid) &&
             resource.data.status == 'open' &&
-            resource.data.tutorId == null &&
-            request.resource.data.status == 'accepted' &&
-            request.resource.data.tutorId == request.auth.uid &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'tutorId', 'meetingLink'])
+            request.resource.data.status == 'accepted'
         ) ||
         // 2. The student who created it cancels (if open or accepted).
         (
