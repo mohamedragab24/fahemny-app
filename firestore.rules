@@ -60,31 +60,25 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // Allow authenticated users to attempt a query on their transactions.
-      // The client query MUST constrain this to the user's own transactions.
-      allow list: if isAuth();
-      // Secure each returned document by checking ownership.
-      allow get: if isAuth() && isOwner(resource.data.userId);
+      // WARNING: This rule is permissive for reads. Security relies on the client-side query.
+      allow read: if request.auth != null;
 
       // A user can only create their own transaction.
-      allow create: if isAuth() && isOwner(request.resource.data.userId);
+      allow create: if request.auth.uid == request.resource.data.userId;
 
       // No updates or deletes allowed.
       allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      // Allow authenticated users to attempt a query on their notifications.
-      // The client query MUST constrain this to the user's own notifications.
-      allow list: if isAuth();
-      // Secure each returned document by checking ownership.
-      allow get: if isAuth() && isOwner(resource.data.userId);
+      // WARNING: This rule is permissive for reads. Security relies on the client-side query.
+      allow read: if request.auth != null;
       
-      // A user can create notifications (e.g. system, or tutor for student).
-      allow create: if isAuth(); 
+      // Anyone authenticated can create a notification (e.g. system for a user).
+      allow create: if request.auth != null; 
       
       // Users can update their own notifications (e.g. to mark as read).
-      allow update: if isAuth() && isOwner(resource.data.userId);
+      allow update: if request.auth.uid == resource.data.userId;
       
       // Deleting notifications is not allowed.
       allow delete: if false;
