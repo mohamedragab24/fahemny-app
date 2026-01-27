@@ -74,15 +74,19 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
+        // Admin can GET any transaction, user can GET their own.
         allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        allow list: if isSignedIn(); // Queries must filter by userId on the client for non-admins.
+        // A user can only LIST their own transactions. The admin query also works as it doesn't have a userId constraint.
+        allow list: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
         allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
+      // Admin can GET any notification, user can GET their own.
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-      allow list: if isSignedIn(); // Queries must filter by userId on the client for non-admins.
+      // A user can only LIST their own notifications.
+      allow list: if isSignedIn() && isOwner(resource.data.userId);
       allow update: if isSignedIn() && isOwner(resource.data.userId);
       allow create: if isSignedIn(); // Should be locked down to backend functions/admins
       allow delete: if isAdmin(request.auth.uid);
