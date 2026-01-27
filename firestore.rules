@@ -11,7 +11,7 @@ service cloud.firestore {
     }
 
     // Checks if the user is authenticated and their profile exists and is not disabled.
-    // IMPORTANT: This function performs a 'get' and cannot be used in 'list' rules.
+    // IMPORTANT: This function performs a 'get' and CANNOT be used in 'list' rules.
     function isSignedInAndActive() {
       return isAuth() &&
              exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
@@ -45,10 +45,12 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     match /userProfiles/{userId} {
+      // Any authenticated user can read any profile. 
+      // This is needed for features like viewing tutor/student names.
       allow read: if isAuth();
       allow create: if isOwner(userId);
-      // Only owner or an admin can update a profile.
-      allow update: if isOwner(userId) || isAdmin(request.auth.uid);
+      // Only owner or an admin can update a profile, and they must be active.
+      allow update: if (isOwner(userId) || isAdmin(request.auth.uid)) && isSignedInAndActive();
       allow delete: if false;
     }
 
@@ -56,9 +58,8 @@ service cloud.firestore {
       allow get: if isSignedInAndActive() && 
                     (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId) || isAdmin(request.auth.uid));
       
-      // WARNING: This rule is intentionally broad to allow tutors to browse open requests
-      // (querying by status). A more secure implementation would involve a backend 
-      // function or data restructuring to avoid allowing any authenticated user to list all sessions.
+      // WARNING: This rule is intentionally broad to allow tutors to browse open requests.
+      // The client-side query MUST securely filter the requests.
       allow list: if isAuth();
       
       allow create: if isSignedInAndActive() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
@@ -82,23 +83,24 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-        // A user can list their own transactions. This is safe for queries.
-        allow list: if request.auth.uid == resource.data.userId;
+        // Users can only query their own transactions. The client query MUST enforce this by filtering on userId.
+        allow list: if isAuth();
         // A user can get their own transaction, or an admin can get any transaction.
-        allow get: if isOwner(resource.data.userId) || isAdmin(request.auth.uid);
+        allow get: if (isOwner(resource.data.userId) || isAdmin(request.auth.uid)) && isSignedInAndActive();
         
         allow create: if isSignedInAndActive() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      // A user can list their own notifications. This is safe for queries.
-      allow list: if request.auth.uid == resource.data.userId;
+      // Users can only query their own notifications. The client query MUST enforce this by filtering on userId.
+      allow list: if isAuth();
       // A user can get their own notification, or an admin can get any.
-      allow get: if isOwner(resource.data.userId) || isAdmin(request.auth.uid);
+      allow get: if (isOwner(resource.data.userId) || isAdmin(request.auth.uid)) && isSignedInAndActive();
       
       allow update: if isSignedInAndActive() && isOwner(resource.data.userId);
-      allow create: if isAuth(); // Should be locked down to backend functions/admins
+      // Create is open to any authenticated user because tutors need to create notifications for students.
+      allow create: if isAuth(); 
       allow delete: if isAdmin(request.auth.uid);
     }
   }

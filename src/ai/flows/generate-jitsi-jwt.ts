@@ -18,9 +18,6 @@ const GenerateJitsiJwtInputSchema = z.object({
 
 const GenerateJitsiJwtOutputSchema = z.object({
   jwt: z.string().describe("The generated JSON Web Token."),
-  scriptUrl: z.string().describe("The URL for the Jitsi External API script."),
-  jitsiServer: z.string().describe("The Jitsi server domain."),
-  fullRoomName: z.string().describe("The full room name for the Jitsi meeting."),
 });
 
 export type GenerateJitsiJwtInput = z.infer<typeof GenerateJitsiJwtInputSchema>;
@@ -30,8 +27,6 @@ export type GenerateJitsiJwtOutput = z.infer<typeof GenerateJitsiJwtOutputSchema
 // Securely load credentials from environment variables
 const JITSI_APP_ID = process.env.JITSI_APP_ID;
 const JITSI_PRIVATE_KEY = process.env.JITSI_PRIVATE_KEY?.replace(/\\n/g, '\n');
-const JITSI_SERVER = "8x8.vc";
-
 
 export const generateJitsiJwtFlow = ai.defineFlow(
   {
@@ -43,9 +38,6 @@ export const generateJitsiJwtFlow = ai.defineFlow(
     if (!JITSI_APP_ID || !JITSI_PRIVATE_KEY) {
          throw new Error('Jitsi App ID or Private Key is not set in environment variables. Please check your .env.local file.');
     }
-    
-    const jitsiScriptUrl = `https://${JITSI_SERVER}/${JITSI_APP_ID}/external_api.js`;
-    const fullRoomName = `${JITSI_APP_ID}/${input.roomName}`;
 
     const payload = {
       aud: 'jitsi',
@@ -68,7 +60,7 @@ export const generateJitsiJwtFlow = ai.defineFlow(
           moderator: input.isModerator,
         },
       },
-      room: "*", // Use wildcard for room to allow joining any room with this token
+      room: input.roomName,
     };
     
     const token = jwt.sign(payload, JITSI_PRIVATE_KEY, {
@@ -82,9 +74,6 @@ export const generateJitsiJwtFlow = ai.defineFlow(
 
     return {
       jwt: token,
-      scriptUrl: jitsiScriptUrl,
-      jitsiServer: JITSI_SERVER,
-      fullRoomName: fullRoomName,
     };
   }
 );

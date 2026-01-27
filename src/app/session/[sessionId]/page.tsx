@@ -8,7 +8,6 @@ import { generateJitsiJwt, type GenerateJitsiJwtOutput } from '@/ai/flows/genera
 import { doc } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Loader2 } from 'lucide-react';
-import ar from '@/locales/ar';
 
 declare global {
     interface Window {
@@ -40,12 +39,14 @@ export default function SessionPage() {
 
     useEffect(() => {
         let script: HTMLScriptElement | null = null;
+        const JITSI_SERVER = "8x8.vc";
 
-        const loadJitsiScript = (scriptUrl: string): Promise<void> => {
+        const loadJitsiScript = (appId: string): Promise<void> => {
             return new Promise((resolve, reject) => {
                 if (window.JitsiMeetExternalAPI) {
                     return resolve();
                 }
+                const scriptUrl = `https://${JITSI_SERVER}/${appId}/external_api.js`;
                 script = document.createElement('script');
                 script.src = scriptUrl;
                 script.async = true;
@@ -65,7 +66,7 @@ export default function SessionPage() {
                 const roomName = `Fahemny-Session-${sessionId}`; 
                 const isModerator = user.uid === session.tutorId;
 
-                const jitsiConfig: GenerateJitsiJwtOutput = await generateJitsiJwt({
+                const { jwt: token } = await generateJitsiJwt({
                     roomName: roomName,
                     userId: user.uid,
                     userName: userProfile.name,
@@ -73,20 +74,26 @@ export default function SessionPage() {
                     isModerator: isModerator,
                 });
 
-                if (!jitsiConfig?.jwt || !jitsiConfig.scriptUrl) {
-                    throw new Error("Failed to get session configuration from server.");
+                if (!token) {
+                    throw new Error("Failed to get session JWT from server.");
                 }
+                
+                // The App ID is the 'sub' claim in the JWT. We need to decode it to load the right script.
+                const decodedToken = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                const appId = decodedToken.sub;
+                const fullRoomName = `${appId}/${roomName}`;
 
-                await loadJitsiScript(jitsiConfig.scriptUrl);
+
+                await loadJitsiScript(appId);
 
                 if (typeof window.JitsiMeetExternalAPI === 'undefined') {
                     throw new Error("Jitsi API not found after loading script.");
                 }
 
                 const options = {
-                    roomName: jitsiConfig.fullRoomName,
+                    roomName: fullRoomName,
                     parentNode: jitsiContainerRef.current,
-                    jwt: jitsiConfig.jwt,
+                    jwt: token,
                     height: '100%',
                     width: '100%',
                     configOverwrite: {
@@ -108,7 +115,7 @@ export default function SessionPage() {
                     },
                 };
                 
-                const api = new window.JitsiMeetExternalAPI(jitsiConfig.jitsiServer, options);
+                const api = new window.JitsiMeetExternalAPI(JITSI_SERVER, options);
                 api.on('iframeReady', () => setIsLoading(false));
                 setJitsiApi(api);
 
