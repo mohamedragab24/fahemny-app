@@ -49,23 +49,26 @@ service cloud.firestore {
      */
     match /sessionRequests/{requestId} {
       allow get: if isSignedIn() && 
-                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId));
+                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId) || isOwner(resource.data.tutorId));
       
-      // Allow any signed-in user to query the list. The 'get' rule will enforce
-      // that they can only read the documents they are authorized to see.
       allow list: if isSignedIn();
       
       // A student can create a request for themselves.
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
       // An update can be performed by:
-      // 1. A tutor accepting the request (setting tutorId and meetingLink).
-      // 2. The student who created it, to cancel it if it's still open.
-      // 3. Either participant to mark it as complete.
       allow update: if isSignedIn() && (
-        (isTutor(request.auth.uid) && resource.data.tutorId == null) || // Tutor accepting
-        (isOwner(resource.data.studentId) && resource.data.status == 'open') || // Student cancelling
-        (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) // Student/Tutor updating status post-session
+        // A tutor can accept an open request
+        (isTutor(request.auth.uid) && resource.data.tutorId == null && request.resource.data.status == 'accepted') ||
+        
+        // The student who created the request can cancel it if it's open or accepted
+        (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
+        
+        // The assigned tutor can cancel an accepted request
+        (isOwner(resource.data.tutorId) && resource.data.status == 'accepted' && request.resource.data.status == 'cancelled') ||
+        
+        // Either the student or the tutor can mark an accepted session as completed
+        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed')
       );
       
       // Only the student can delete their request, and only if it's still open.

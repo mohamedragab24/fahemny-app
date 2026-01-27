@@ -1,17 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Video, CalendarX, CheckCircle, Clock } from 'lucide-react';
+import { Video, CalendarX, CheckCircle, Clock, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 // Helper component to display the other user's name
 function OtherUserDetails({ userId, label }: { userId: string, label: string }) {
@@ -33,6 +35,8 @@ export default function MySessionsPage() {
   const t = ar.header.links;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -53,6 +57,19 @@ export default function MySessionsPage() {
   }, [firestore, user, userProfile]);
 
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
+
+  const handleUpdateStatus = (sessionId: string, newStatus: 'completed' | 'cancelled') => {
+    setUpdatingId(sessionId);
+    const sessionRef = doc(firestore, 'sessionRequests', sessionId);
+    updateDocumentNonBlocking(sessionRef, { status: newStatus });
+    toast({
+        title: `تم تحديث حالة الجلسة`,
+        description: `تم ${newStatus === 'completed' ? 'إنهاء' : 'إلغاء'} الجلسة بنجاح.`
+    });
+    // The UI will update automatically due to the real-time listener.
+    // We can set updatingId to null after a short delay to allow UI to catch up.
+    setTimeout(() => setUpdatingId(null), 1000);
+  };
 
   const upcomingSessions = useMemo(() => sessions?.filter(s => s.status === 'accepted').sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()) || [], [sessions]);
   const completedSessions = useMemo(() => sessions?.filter(s => s.status === 'completed').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [], [sessions]);
@@ -105,13 +122,48 @@ export default function MySessionsPage() {
               {userProfile?.role === 'tutor' && <OtherUserDetails userId={session.studentId} label="المستفهم" />}
                <p className="font-bold text-primary text-lg">{session.price} جنيه</p>
             </CardContent>
-            <CardFooter>
-                {session.status === 'accepted' && session.meetingLink && (
-                    <Button asChild className="w-full">
-                        <Link href={session.meetingLink} target="_blank" rel="noopener noreferrer">
-                            <Video className="me-2 h-4 w-4" />
-                            دخول الجلسة
-                        </Link>
+            <CardFooter className="flex flex-col items-stretch gap-2">
+                {session.status === 'accepted' && (
+                    <>
+                        {session.meetingLink && (
+                             <Button asChild>
+                                <Link href={session.meetingLink} target="_blank" rel="noopener noreferrer">
+                                    <Video className="me-2 h-4 w-4" />
+                                    دخول الجلسة
+                                </Link>
+                            </Button>
+                        )}
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => handleUpdateStatus(session.id, 'completed')}
+                                disabled={updatingId === session.id}
+                            >
+                                {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <CheckCircle className="me-2 h-4 w-4" />}
+                                إنهاء الجلسة
+                            </Button>
+                            <Button 
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                                disabled={updatingId === session.id}
+                            >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">إلغاء</span>
+                            </Button>
+                        </div>
+                    </>
+                )}
+                {session.status === 'open' && userProfile?.role === 'student' && (
+                     <Button 
+                        variant="destructive"
+                        className="w-full"
+                        onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                        disabled={updatingId === session.id}
+                    >
+                        {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <X className="me-2 h-4 w-4" />}
+                        إلغاء الطلب
                     </Button>
                 )}
             </CardFooter>
