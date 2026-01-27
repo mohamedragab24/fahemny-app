@@ -11,12 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createZoomMeeting } from '@/ai/flows/create-zoom-meeting';
+import { useRouter } from 'next/navigation';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const requestsQuery = useMemoFirebase(
@@ -66,8 +68,10 @@ export default function BrowseRequestsPage() {
       toast({
         variant: 'default',
         title: 'تم قبول الطلب!',
-        description: 'تم إنشاء جلسة Zoom وإضافتها للطلب.',
+        description: 'تم إنشاء جلسة Zoom وسيتم توجيهك لصفحة جلساتك.',
       });
+
+      router.push('/sessions');
 
     } catch (error: any) {
       console.error("Failed to accept request:", error);

@@ -10,11 +10,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Loader2 } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,29 +76,14 @@ export default function CreateRequestPage() {
     }
 
     try {
-      const requestsCollection = collection(firestore, 'sessionRequests');
-      const newRequest = {
-        ...values,
-        studentId: user.uid,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-      };
-      
-      addDocumentNonBlocking(requestsCollection, newRequest);
-
-      toast({
-        title: 'تم نشر طلبك بنجاح!',
-        description: 'سيتم عرضه على المفهّمين الآن.',
-      });
-      
-      router.push('/sessions');
-
+      sessionStorage.setItem('newRequestData', JSON.stringify(values));
+      router.push('/requests/create/review');
     } catch (error: any) {
-      console.error("Failed to create request:", error);
+      console.error("Failed to save request for review:", error);
       toast({
         variant: 'destructive',
-        title: 'فشل نشر الطلب',
-        description: 'حدث خطأ غير متوقع.',
+        title: 'حدث خطأ',
+        description: 'لم نتمكن من تحضير طلبك للمراجعة.',
       });
     }
   }
@@ -149,7 +133,7 @@ export default function CreateRequestPage() {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="font-headline">{t.create_request}</CardTitle>
-          <CardDescription>املأ النموذج التالي لنشر طلبك وسيتم عرضه للمفهّمين.</CardDescription>
+          <CardDescription>املأ النموذج التالي لنقلك إلى صفحة المراجعة قبل النشر.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -262,9 +246,9 @@ export default function CreateRequestPage() {
                 {form.formState.isSubmitting ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        جارٍ النشر...
+                        جارٍ التحضير...
                     </>
-                ) : 'نشر الطلب'}
+                ) : 'مراجعة الطلب'}
               </Button>
             </form>
           </Form>
