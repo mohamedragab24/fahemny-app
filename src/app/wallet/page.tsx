@@ -6,19 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Download, Wallet as WalletIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Download, Wallet as WalletIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Transaction } from '@/lib/types';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 export default function WalletPage() {
-  const t = ar.header.links;
+  const t = ar.wallet;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
   const transactionsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
+    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
@@ -30,10 +31,10 @@ export default function WalletPage() {
   
   const getTransactionTypeTranslation = (type: Transaction['type']) => {
     switch(type) {
-      case 'deposit': return 'إيداع';
-      case 'session_payment': return 'دفع جلسة';
-      case 'session_payout': return 'أرباح جلسة';
-      case 'withdrawal': return 'سحب رصيد';
+      case 'deposit': return t.types.deposit;
+      case 'session_payment': return t.types.session_payment;
+      case 'session_payout': return t.types.session_payout;
+      case 'withdrawal': return t.types.withdrawal;
       default: return type;
     }
   };
@@ -59,10 +60,12 @@ export default function WalletPage() {
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold font-headline">{t.wallet}</h1>
-        <Button disabled>
-            <PlusCircle className="me-2 h-4 w-4" />
-            إضافة رصيد (قريباً)
+        <h1 className="text-3xl font-bold font-headline">{t.title}</h1>
+        <Button asChild>
+            <Link href="/wallet/deposit">
+              <PlusCircle className="me-2 h-4 w-4" />
+              {t.add_balance_button}
+            </Link>
         </Button>
       </div>
       
@@ -71,10 +74,10 @@ export default function WalletPage() {
             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
-                        <CardTitle>سجل المعاملات</CardTitle>
+                        <CardTitle>{t.transactions_history}</CardTitle>
                         <Button variant="outline" size="sm" disabled>
                             <Download className="me-2 h-4 w-4" />
-                            تصدير
+                            {t.export_button}
                         </Button>
                     </div>
                 </CardHeader>
@@ -83,14 +86,14 @@ export default function WalletPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>الوصف</TableHead>
-                                    <TableHead>النوع</TableHead>
-                                    <TableHead>التاريخ</TableHead>
-                                    <TableHead className="text-left">المبلغ</TableHead>
+                                    <TableHead>{t.table.description}</TableHead>
+                                    <TableHead>{t.table.type}</TableHead>
+                                    <TableHead>{t.table.date}</TableHead>
+                                    <TableHead className="text-left">{t.table.amount}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {transactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((tx) => (
+                                {transactions.map((tx) => (
                                     <TableRow key={tx.id}>
                                         <TableCell className="font-medium">{tx.description}</TableCell>
                                         <TableCell>
@@ -107,7 +110,7 @@ export default function WalletPage() {
                     ) : (
                         <div className="text-center py-12 text-muted-foreground">
                             <WalletIcon className="mx-auto h-12 w-12" />
-                            <p className="mt-4">لا توجد معاملات لعرضها.</p>
+                            <p className="mt-4">{t.no_transactions}</p>
                         </div>
                     )}
                 </CardContent>
@@ -116,15 +119,15 @@ export default function WalletPage() {
         <div>
             <Card className="sticky top-20">
                 <CardHeader>
-                    <CardTitle>رصيدك الحالي</CardTitle>
-                    <CardDescription>هذا هو المبلغ المتاح في حسابك.</CardDescription>
+                    <CardTitle>{t.current_balance_title}</CardTitle>
+                    <CardDescription>{t.current_balance_description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-4xl font-bold text-primary">{currentBalance.toFixed(2)}</p>
                     <p className="text-muted-foreground">جنيه مصري</p>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" disabled>سحب الأرباح (قريباً)</Button>
+                    <Button className="w-full" disabled>{t.withdraw_button}</Button>
                 </CardFooter>
             </Card>
         </div>

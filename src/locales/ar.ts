@@ -174,6 +174,40 @@ export default {
       'الالتزام بالمجالات المسموح بها شرط أساسي.',
     ]
   },
+  wallet: {
+    title: 'المحفظة',
+    add_balance_button: 'إضافة رصيد',
+    transactions_history: 'سجل المعاملات',
+    export_button: 'تصدير',
+    no_transactions: 'لا توجد معاملات لعرضها.',
+    current_balance_title: 'رصيدك الحالي',
+    current_balance_description: 'هذا هو المبلغ المتاح في حسابك.',
+    withdraw_button: 'سحب الأرباح (قريباً)',
+    table: {
+        description: 'الوصف',
+        type: 'النوع',
+        date: 'التاريخ',
+        amount: 'المبلغ',
+    },
+    types: {
+        deposit: 'إيداع',
+        withdrawal: 'سحب',
+        session_payment: 'دفع جلسة',
+        session_payout: 'أرباح جلسة',
+    },
+    deposit: {
+        title: 'إضافة رصيد للمحفظة',
+        description: 'أدخل المبلغ الذي تود إضافته. سيتم توجيهك إلى صفحة الدفع (محاكاة).',
+        amount_label: 'المبلغ (بالجنيه المصري)',
+        amount_placeholder: '100',
+        min_amount_error: 'الحد الأدنى للإيداع هو 50 جنيهًا',
+        info_text: 'في تطبيق حقيقي، ستكون هناك خطوات إضافية لاختيار وسيلة الدفع وإتمام العملية عبر بوابة دفع آمنة.',
+        submit_button: 'المتابعة إلى الدفع',
+        submitting_button: 'جارٍ التحضير...',
+        success_toast_title: 'تمت العملية بنجاح!',
+        success_toast_description: 'تمت إضافة المبلغ إلى رصيدك.',
+    }
+  },
   admin: {
     title: 'لوحة التحكم',
     nav: {
