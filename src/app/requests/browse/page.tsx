@@ -21,18 +21,23 @@ export default function BrowseRequestsPage() {
   const router = useRouter();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
-  const requestsQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'sessionRequests'), where('status', '==', 'open')) : null,
-    [firestore]
-  );
-
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<SessionRequest>(requestsQuery);
-
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
     [firestore, user]
   );
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const requestsQuery = useMemoFirebase(
+    () => {
+      if (firestore && userProfile?.role === 'tutor') {
+        return query(collection(firestore, 'sessionRequests'), where('status', '==', 'open'));
+      }
+      return null;
+    },
+    [firestore, userProfile]
+  );
+
+  const { data: requests, isLoading: isLoadingRequests } = useCollection<SessionRequest>(requestsQuery);
 
 
   const handleAccept = async (request: SessionRequest) => {
