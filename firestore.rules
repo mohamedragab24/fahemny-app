@@ -7,8 +7,10 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     function isSignedIn() {
-      // User must be authenticated and their profile must not be disabled.
-      return request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.disabled != true;
+      // User must be authenticated and their profile must exist and not be disabled.
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.disabled != true;
     }
 
     function isOwner(userId) {
@@ -20,15 +22,17 @@ service cloud.firestore {
     }
 
     function isStudent(userId) {
-      return getUserData(userId).role == 'student';
+      return exists(/databases/$(database)/documents/userProfiles/$(userId)) && getUserData(userId).role == 'student';
     }
 
     function isTutor(userId) {
-      return getUserData(userId).role == 'tutor';
+      return exists(/databases/$(database)/documents/userProfiles/$(userId)) && getUserData(userId).role == 'tutor';
     }
     
     function isAdmin(userId) {
-       return request.auth != null && exists(/databases/$(database)/documents/userProfiles/$(userId)) && getUserData(userId).isAdmin == true;
+       return request.auth != null && 
+              exists(/databases/$(database)/documents/userProfiles/$(userId)) && 
+              getUserData(userId).isAdmin == true;
     }
 
     // ----------------------------------------------------------------------
