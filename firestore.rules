@@ -22,8 +22,7 @@ service cloud.firestore {
       // A user can create their own profile.
       allow create: if isOwner(userId);
       
-      // A user can update their own profile. The admin check was removed
-      // because the 'get' call inside it contaminates list queries elsewhere.
+      // A user can update their own profile.
       allow update: if isOwner(userId);
       
       // No one can delete profiles.
@@ -77,8 +76,11 @@ service cloud.firestore {
       // Allow user to get their own notification.
       allow get: if isAuth() && isOwner(resource.data.userId);
       
-      // Users can create their own notifications (e.g. system).
-      allow create: if isAuth() && isOwner(request.resource.data.userId); 
+      // IMPORTANT: Notification creation is tricky. The tutor creates a notification for the student.
+      // This rule allows any logged-in user to create a notification, which is a security compromise
+      // but necessary for the app's current logic without using Cloud Functions.
+      // The app logic itself should be the main guard against spam.
+      allow create: if isAuth(); 
       
       // Users can update their own notifications (e.g. to mark as read).
       allow update: if isAuth() && isOwner(resource.data.userId);
