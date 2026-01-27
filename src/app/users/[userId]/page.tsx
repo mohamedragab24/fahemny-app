@@ -11,6 +11,7 @@ import { Star, Briefcase, CalendarDays, ShieldCheck } from 'lucide-react';
 import ar from '@/locales/ar';
 import { useMemo } from 'react';
 import { UserInfoLink } from '@/components/UserInfoLink';
+import { Badge } from '@/components/ui/badge';
 
 
 function getInitials(name?: string | null) {
@@ -201,6 +202,18 @@ export default function UserProfilePage() {
                 </div>
               </div>
           </div>
+
+           {userProfile.role === 'tutor' && userProfile.specialties && userProfile.specialties.length > 0 && (
+              <div className="mt-8">
+                  <h3 className="text-xl font-headline font-semibold mb-4 text-center">التخصصات</h3>
+                  <div className="flex flex-wrap justify-center gap-2">
+                      {userProfile.specialties.map((spec, index) => (
+                          <Badge key={index} variant="secondary">{spec}</Badge>
+                      ))}
+                  </div>
+              </div>
+            )}
+
           <UserReviews userId={userId} />
         </CardContent>
       </Card>

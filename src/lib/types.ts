@@ -10,6 +10,7 @@ export type UserProfile = {
   isAdmin?: boolean;
   disabled?: boolean;
   createdAt: string;
+  specialties?: string[];
 };
 
 export type SessionRequest = {

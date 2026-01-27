@@ -43,6 +43,13 @@
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",
           "format": "date-time"
+        },
+        "specialties": {
+          "type": "array",
+          "description": "The academic or professional fields the tutor specializes in.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

@@ -55,15 +55,34 @@ export default function BrowseRequestsPage() {
     return Array.from(fields);
   }, [requests]);
 
-  const filteredRequests = useMemo(() => {
-    if (!requests) return [];
-    return requests.filter(request => {
+  const { matchingRequests, otherRequests } = useMemo(() => {
+    if (!requests || !userProfile) return { matchingRequests: [], otherRequests: [] };
+    
+    const allFiltered = requests.filter(request => {
       const searchMatch = searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
       const fieldMatch = selectedField === 'all' || request.field === selectedField;
       const priceMatch = request.price >= priceRange[0] && request.price <= priceRange[1];
       return searchMatch && fieldMatch && priceMatch;
     });
-  }, [requests, searchTerm, selectedField, priceRange]);
+
+    const tutorSpecialties = new Set(userProfile.specialties || []);
+    if (tutorSpecialties.size === 0) {
+        return { matchingRequests: [], otherRequests: allFiltered };
+    }
+
+    const matching: SessionRequest[] = [];
+    const others: SessionRequest[] = [];
+
+    allFiltered.forEach(request => {
+        if (tutorSpecialties.has(request.field)) {
+            matching.push(request);
+        } else {
+            others.push(request);
+        }
+    });
+    return { matchingRequests: matching, otherRequests: others };
+
+  }, [requests, searchTerm, selectedField, priceRange, userProfile]);
 
 
   const handleAccept = async (request: SessionRequest) => {
@@ -118,6 +137,39 @@ export default function BrowseRequestsPage() {
   };
   
   const isLoading = isLoadingRequests || isUserLoading || isLoadingProfile;
+
+  const renderRequestCard = (request: SessionRequest) => (
+    <Card key={request.id} className="flex flex-col">
+        <CardHeader>
+        <CardTitle>{request.title}</CardTitle>
+            <div className="text-sm text-muted-foreground flex items-center gap-1">
+            <span>بواسطة:</span><UserInfoLink userId={request.studentId} className="text-sm" />
+        </div>
+        <CardDescription>{request.field}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow">
+        <p className="line-clamp-3 text-sm text-muted-foreground">{request.description}</p>
+        <div className="flex justify-between items-center mt-4 text-sm ">
+            <span className="text-muted-foreground">السعر: <span className="font-bold text-primary">{request.price} جنيه</span></span>
+            <span className="text-muted-foreground">{new Date(request.sessionDate).toLocaleDateString('ar-EG')} - {request.sessionTime}</span>
+        </div>
+        </CardContent>
+        <CardFooter>
+        <Button 
+            className="w-full" 
+            onClick={() => handleAccept(request)}
+            disabled={acceptingId !== null}
+        >
+            {acceptingId === request.id ? (
+            <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                جار القبول...
+            </>
+            ) : "قبول الطلب"}
+        </Button>
+        </CardFooter>
+    </Card>
+  );
   
   if (isLoading) {
     return (
@@ -189,45 +241,32 @@ export default function BrowseRequestsPage() {
         </div>
       </div>
 
-      {filteredRequests && filteredRequests.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRequests.map((request) => (
-            <Card key={request.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle>{request.title}</CardTitle>
-                 <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <span>بواسطة:</span><UserInfoLink userId={request.studentId} className="text-sm" />
-                </div>
-                <CardDescription>{request.field}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="line-clamp-3 text-sm text-muted-foreground">{request.description}</p>
-                <div className="flex justify-between items-center mt-4 text-sm ">
-                    <span className="text-muted-foreground">السعر: <span className="font-bold text-primary">{request.price} جنيه</span></span>
-                    <span className="text-muted-foreground">{new Date(request.sessionDate).toLocaleDateString('ar-EG')} - {request.sessionTime}</span>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAccept(request)}
-                  disabled={acceptingId !== null}
-                >
-                  {acceptingId === request.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      جار القبول...
-                    </>
-                  ) : "قبول الطلب"}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+       {!isLoading && matchingRequests.length === 0 && otherRequests.length === 0 ? (
+        <div className="border rounded-lg p-8 text-center bg-secondary/50 mt-8">
+            <p className="text-muted-foreground">لا توجد طلبات شرح متاحة تطابق معايير البحث. حاول مرة أخرى لاحقًا.</p>
         </div>
       ) : (
-        <div className="border rounded-lg p-8 text-center bg-secondary/50 mt-8">
-          <p className="text-muted-foreground">لا توجد طلبات شرح متاحة تطابق معايير البحث. حاول مرة أخرى لاحقًا.</p>
-        </div>
+        <>
+            {matchingRequests.length > 0 && (
+            <section className="mb-12">
+                <h2 className="text-2xl font-bold font-headline mb-4">طلبات تناسب تخصصك</h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {matchingRequests.map(renderRequestCard)}
+                </div>
+            </section>
+            )}
+
+            {otherRequests.length > 0 && (
+            <section>
+                <h2 className="text-2xl font-bold font-headline mb-4">
+                {matchingRequests.length > 0 ? 'طلبات أخرى' : 'كل الطلبات المتاحة'}
+                </h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {otherRequests.map(renderRequestCard)}
+                </div>
+            </section>
+            )}
+        </>
       )}
     </div>
   );

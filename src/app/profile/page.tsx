@@ -13,15 +13,83 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Loader2, Star, Pencil } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Badge } from '@/components/ui/badge';
 
 const profileFormSchema = z.object({
   name: z.string().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل'),
 });
+
+const specialtiesSchema = z.object({
+  specialties: z.string().optional(),
+});
+
+
+function SpecialtiesForm({ userProfile }: { userProfile: UserProfile }) {
+  const { user, firestore } = useFirebase();
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof specialtiesSchema>>({
+    resolver: zodResolver(specialtiesSchema),
+    values: {
+      specialties: userProfile.specialties?.join(', ') || '',
+    },
+  });
+
+  const onSubmit = (data: z.infer<typeof specialtiesSchema>) => {
+    if (!user) return;
+    const userDocRef = doc(firestore, 'userProfiles', user.uid);
+    const specialtiesArray = data.specialties?.split(',').map(s => s.trim()).filter(s => s) || [];
+    setDocumentNonBlocking(userDocRef, { specialties: specialtiesArray }, { merge: true });
+    toast({
+      title: 'تم تحديث التخصصات',
+      description: 'تم حفظ تخصصاتك الجديدة بنجاح.',
+    });
+  };
+
+  return (
+    <Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardHeader>
+            <CardTitle>التخصصات</CardTitle>
+            <CardDescription>أضف المجالات التي تتخصص فيها. هذا يساعد الطلاب في العثور عليك.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+                {userProfile.specialties?.map(spec => <Badge key={spec} variant="secondary">{spec}</Badge>)}
+            </div>
+             <FormField
+                control={form.control}
+                name="specialties"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>تخصصاتك (مفصولة بفاصلة)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="الرياضيات, البرمجة, الفيزياء..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
+              {form.formState.isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              حفظ التخصصات
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
+
 
 export default function ProfilePage() {
   const t = ar.header.userMenu;
@@ -59,6 +127,7 @@ export default function ProfilePage() {
   };
 
   const getInitials = (name?: string | null) => {
+    if (typeof name !== 'string' || !name) return '?';
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || user?.email?.[0].toUpperCase();
   };
 
@@ -133,7 +202,7 @@ export default function ProfilePage() {
     <div className="container py-8">
       <h1 className="text-3xl font-bold font-headline mb-6">{t.profile}</h1>
       <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-8">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <Card>
@@ -169,6 +238,7 @@ export default function ProfilePage() {
               </Card>
             </form>
           </Form>
+          {userProfile.role === 'tutor' && <SpecialtiesForm userProfile={userProfile} />}
         </div>
 
         <div className="space-y-8">
