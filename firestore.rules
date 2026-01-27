@@ -60,13 +60,11 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // Allow any authenticated user to try and list transactions.
-      allow list: if isAuth();
-      // Only allow getting a transaction if the user is the owner.
-      // This is checked for every doc returned by a `list` query.
-      allow get: if isAuth() && isOwner(resource.data.userId);
+      // Users can only read their own transactions. This rule works for queries
+      // as long as the client query includes `where('userId', '==', request.auth.uid)`.
+      allow read: if isAuth() && isOwner(resource.data.userId);
 
-      // Create: A user can create their own transaction.
+      // A user can only create their own transaction.
       allow create: if isAuth() && isOwner(request.resource.data.userId);
 
       // No updates or deletes allowed.
@@ -74,16 +72,14 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      // Allow any authenticated user to try and list notifications.
-      allow list: if isAuth();
-      // Only allow reading/updating a notification if the user is the owner.
-      // This is checked for every doc returned by a `list` query.
-      allow get, update: if isAuth() && isOwner(resource.data.userId);
+      // A user can only read or update their own notifications. This rule works for queries
+      // as long as the client query includes `where('userId', '==', request.auth.uid)`.
+      allow read, update: if isAuth() && isOwner(resource.data.userId);
       
-      // Create: Any authenticated user can create a notification (e.g. system, or tutor for student).
+      // A user can create notifications (e.g. system, or tutor for student).
       allow create: if isAuth(); 
       
-      // Delete: Not allowed.
+      // Deleting notifications is not allowed.
       allow delete: if false;
     }
   }
