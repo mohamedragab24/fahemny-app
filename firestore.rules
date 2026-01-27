@@ -38,9 +38,8 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /userProfiles/{userId} {
-      // Read: Any authenticated, active user can read any profile. 
-      // This is safe for queries because isActive() checks the requester's own profile once.
-      allow read: if isAuth() && isActive(request.auth.uid);
+      // Read: A user can read their own profile. Other authenticated, active users can also read any profile.
+      allow read: if isAuth() && (isOwner(userId) || isActive(request.auth.uid));
       
       // Create: A user can create their own profile.
       allow create: if isOwner(userId);
