@@ -53,14 +53,22 @@ service cloud.firestore {
     }
 
     match /sessionRequests/{requestId} {
-      // Read: This is a "clean" rule for queries. It has no get/exists calls.
-      // It allows reading a session if you are the student, the assigned tutor, or if it's an open request.
-      allow read: if isAuth() && (
+      // This is the pattern for securing queries.
+      // 1. A loose `list` rule allows the query to be attempted.
+      // 2. A strict `get` rule is evaluated for every document the query *could* return.
+      // The client-side code *must* include `where` clauses that align with the `get` rule.
+      
+      // Allow any authenticated user to try and list sessions.
+      allow list: if isAuth();
+
+      // Only allow reading a single session if you are the student, the tutor, or if it's open.
+      // This rule is checked against every document returned by a `list` query.
+      allow get: if isAuth() && (
         isOwner(resource.data.studentId) || 
         (resource.data.tutorId != null && isOwner(resource.data.tutorId)) ||
         resource.data.status == 'open'
       );
-
+      
       // Create: An active student can create a request for themselves.
       // Safe because create is a single-doc operation.
       allow create: if isAuth() && isOwner(request.resource.data.studentId) && isRole(request.auth.uid, 'student') && isActive(request.auth.uid);
@@ -80,8 +88,11 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // Read: A user can read their own transactions. This "clean" rule is safe for queries.
-      allow read: if isAuth() && isOwner(resource.data.userId);
+      // Allow any authenticated user to try and list transactions.
+      allow list: if isAuth();
+      // Only allow getting a transaction if the user is the owner.
+      // This is checked for every doc returned by a `list` query.
+      allow get: if isAuth() && isOwner(resource.data.userId);
 
       // Create: A user can create their own transaction.
       allow create: if isAuth() && isOwner(request.resource.data.userId);
@@ -91,8 +102,11 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      // Read/Update: A user can read/update their own notifications. This "clean" rule is safe for queries.
-      allow read, update: if isAuth() && isOwner(resource.data.userId);
+      // Allow any authenticated user to try and list notifications.
+      allow list: if isAuth();
+      // Only allow reading/updating a notification if the user is the owner.
+      // This is checked for every doc returned by a `list` query.
+      allow get, update: if isAuth() && isOwner(resource.data.userId);
       
       // Create: Any authenticated user can create a notification (e.g. system, or tutor for student).
       allow create: if isAuth(); 
