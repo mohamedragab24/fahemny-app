@@ -26,7 +26,7 @@ export type GenerateJitsiJwtOutput = z.infer<typeof GenerateJitsiJwtOutputSchema
 
 // Securely load credentials from environment variables
 const JITSI_APP_ID = process.env.JITSI_APP_ID;
-const JITSI_PRIVATE_KEY = process.env.JITSI_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const JITSI_PRIVATE_KEY = process.env.JITSI_PRIVATE_KEY;
 
 export const generateJitsiJwtFlow = ai.defineFlow(
   {
@@ -38,6 +38,8 @@ export const generateJitsiJwtFlow = ai.defineFlow(
     if (!JITSI_APP_ID || !JITSI_PRIVATE_KEY) {
          throw new Error('Jitsi App ID or Private Key is not set in environment variables. Please check your .env.local file.');
     }
+
+    const privateKey = JITSI_PRIVATE_KEY.replace(/\\n/g, '\n');
 
     const payload = {
       aud: 'jitsi',
@@ -63,7 +65,7 @@ export const generateJitsiJwtFlow = ai.defineFlow(
       room: input.roomName,
     };
     
-    const token = jwt.sign(payload, JITSI_PRIVATE_KEY, {
+    const token = jwt.sign(payload, privateKey, {
         algorithm: 'RS256',
         header: {
             alg: 'RS256',

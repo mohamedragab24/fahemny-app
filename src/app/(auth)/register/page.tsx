@@ -69,7 +69,7 @@ export default function RegisterPage() {
       };
 
       const userDocRef = doc(firestore, "userProfiles", user.uid);
-      await setDoc(userDocRef, userProfile, { merge: true });
+      await setDoc(userDocRef, userProfile);
 
       toast({
         title: "تم إنشاء الحساب!",
