@@ -28,6 +28,8 @@ export type SessionRequest = {
   meetingLink?: string;
   studentRating?: number;
   tutorRating?: number;
+  studentReview?: string;
+  tutorReview?: string;
 };
 
 export type Transaction = {

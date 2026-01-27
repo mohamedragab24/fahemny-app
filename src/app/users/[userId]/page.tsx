@@ -1,20 +1,125 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { UserProfile, SessionRequest } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, Briefcase, CalendarDays, ShieldCheck } from 'lucide-react';
 import ar from '@/locales/ar';
+import { useMemo } from 'react';
+import { UserInfoLink } from '@/components/UserInfoLink';
+
 
 function getInitials(name?: string | null) {
   if (typeof name !== 'string' || !name) {
     return '?';
   }
   return name.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+}
+
+
+function UserReviews({ userId }: { userId: string }) {
+    const firestore = useFirestore();
+
+    const studentSessionsQuery = useMemoFirebase(
+        () => query(collection(firestore, 'sessionRequests'), where('studentId', '==', userId), where('status', '==', 'completed')),
+        [firestore, userId]
+    );
+    const { data: studentSessions, isLoading: isLoadingStudent } = useCollection<SessionRequest>(studentSessionsQuery);
+    
+    const tutorSessionsQuery = useMemoFirebase(
+        () => query(collection(firestore, 'sessionRequests'), where('tutorId', '==', userId), where('status', '==', 'completed')),
+        [firestore, userId]
+    );
+    const { data: tutorSessions, isLoading: isLoadingTutor } = useCollection<SessionRequest>(tutorSessionsQuery);
+
+    const reviews = useMemo(() => {
+        const allSessions = [...(studentSessions || []), ...(tutorSessions || [])];
+        const receivedReviews = allSessions
+            .map(session => {
+                const isUserTheStudent = session.studentId === userId;
+                
+                // Review FOR the student BY the tutor
+                if (isUserTheStudent && session.tutorReview && session.tutorId) {
+                    return {
+                        review: session.tutorReview,
+                        rating: session.studentRating,
+                        reviewerId: session.tutorId,
+                        sessionTitle: session.title,
+                        createdAt: session.createdAt
+                    };
+                }
+                
+                // Review FOR the tutor BY the student
+                if (!isUserTheStudent && session.studentReview && session.studentId) {
+                     return {
+                        review: session.studentReview,
+                        rating: session.tutorRating,
+                        reviewerId: session.studentId,
+                        sessionTitle: session.title,
+                        createdAt: session.createdAt
+                    };
+                }
+                return null;
+            })
+            .filter((review): review is NonNullable<typeof review> => review !== null && review.rating !== undefined && review.review !== undefined && review.review.trim() !== '')
+            .sort((a, b) => new Date(b!.createdAt).getTime() - new Date(a!.createdAt).getTime());
+        
+        return receivedReviews;
+
+    }, [studentSessions, tutorSessions, userId]);
+
+    if (isLoadingStudent || isLoadingTutor) {
+        return (
+            <div className="mt-8 space-y-4">
+                 <h3 className="text-xl font-headline font-semibold mb-4 text-center">التقييمات والمراجعات</h3>
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+            </div>
+        );
+    }
+    
+    if (reviews.length === 0) {
+        return (
+            <div className="mt-8">
+                <h3 className="text-xl font-headline font-semibold mb-4 text-center">التقييمات والمراجعات</h3>
+                <p className="text-center text-muted-foreground">لا توجد مراجعات متاحة لهذا المستخدم بعد.</p>
+          </div>
+        );
+    }
+
+    return (
+        <div className="mt-8">
+            <h3 className="text-xl font-headline font-semibold mb-4 text-center">التقييمات والمراجعات</h3>
+            <div className="space-y-6">
+                {reviews.map((review, index) => (
+                    <Card key={index} className="bg-secondary/50">
+                        <CardContent className="pt-6">
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold">بخصوص جلسة: "{review.sessionTitle}"</p>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <span>بواسطة:</span><UserInfoLink userId={review.reviewerId} />
+                                    </div>
+                                </div>
+                                {review.rating && (
+                                    <div className="flex items-center gap-0.5 text-yellow-400 shrink-0">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star key={i} className={`w-4 h-4 ${review.rating! > i ? 'fill-current' : ''}`} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="mt-4 text-foreground italic">"{review.review}"</p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
 }
 
 export default function UserProfilePage() {
@@ -96,14 +201,7 @@ export default function UserProfilePage() {
                 </div>
               </div>
           </div>
-
-          {/* This section can be extended later to show reviews or session history */}
-          <div className="mt-8">
-            <h3 className="text-xl font-headline font-semibold mb-4 text-center">سجل النشاط</h3>
-            <p className="text-center text-muted-foreground">
-                سيتم عرض سجل الجلسات المكتملة والتقييمات هنا قريبًا.
-            </p>
-          </div>
+          <UserReviews userId={userId} />
         </CardContent>
       </Card>
     </div>

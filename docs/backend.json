@@ -132,6 +132,14 @@
         "tutorRating": {
           "type": "number",
           "description": "Rating (1-5) given by the student to the tutor."
+        },
+        "studentReview": {
+          "type": "string",
+          "description": "Text review given by the tutor to the student."
+        },
+        "tutorReview": {
+          "type": "string",
+          "description": "Text review given by the student to the tutor."
         }
       },
       "required": [

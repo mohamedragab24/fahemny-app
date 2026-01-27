@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { UserInfoLink } from '@/components/UserInfoLink';
+import { Textarea } from '@/components/ui/textarea';
 
 
 // Helper component to display the other user's name and rating
@@ -49,6 +50,7 @@ function OtherUserDetails({ userId, label }: { userId: string, label: string }) 
 // Rating Dialog Component
 function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { session: SessionRequest; userRole: 'student' | 'tutor'; open: boolean; onOpenChange: (open: boolean) => void; onSubmitted: () => void; }) {
   const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -61,11 +63,15 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
     setIsSubmitting(true);
     
     const ratedField = userRole === 'student' ? 'tutorRating' : 'studentRating';
+    const reviewField = userRole === 'student' ? 'tutorReview' : 'studentReview';
     const ratedUserId = userRole === 'student' ? session.tutorId : session.studentId;
 
     try {
       const sessionRef = doc(firestore, 'sessionRequests', session.id);
-      await updateDoc(sessionRef, { [ratedField]: rating });
+      await updateDoc(sessionRef, { 
+        [ratedField]: rating,
+        [reviewField]: review
+      });
 
       // After submitting rating, update the average rating for the other user.
       if (ratedUserId) {
@@ -81,6 +87,7 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
       setIsSubmitting(false);
       onOpenChange(false);
       setRating(0);
+      setReview('');
     }
   };
 
@@ -101,6 +108,13 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
               onClick={() => setRating(star)}
             />
           ))}
+        </div>
+        <div className="py-2">
+            <Textarea 
+                placeholder="أضف مراجعة مكتوبة (اختياري)"
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+            />
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} variant="ghost">إلغاء</Button>
