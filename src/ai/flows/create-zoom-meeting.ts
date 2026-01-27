@@ -1,103 +1,40 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for creating a Zoom meeting.
+ * @fileOverview A Genkit flow for creating a unique meeting link for a session.
+ * NOTE: The filename is a legacy name. This flow now uses Jitsi Meet.
+ * This uses Jitsi Meet to dynamically generate a unique, private URL for each session
+ * without needing API keys or complex authentication.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-const CreateZoomMeetingInputSchema = z.object({
-  topic: z.string().describe("The topic of the Zoom meeting."),
+const CreateMeetingLinkInputSchema = z.object({
+  topic: z.string().describe("The topic of the meeting."),
   startTime: z.string().describe("The start time of the meeting in ISO 8601 format."),
+  sessionId: z.string().describe("The unique ID of the session request, used to generate the unique meeting URL."),
 });
 
-export const createZoomMeetingFlow = ai.defineFlow(
+export type CreateMeetingLinkInput = z.infer<typeof CreateMeetingLinkInputSchema>;
+
+export const createMeetingLinkFlow = ai.defineFlow(
   {
-    name: 'createZoomMeetingFlow',
-    inputSchema: CreateZoomMeetingInputSchema,
-    outputSchema: z.string().describe("The join URL for the created Zoom meeting."),
+    name: 'createMeetingLinkFlow', // Renamed flow for clarity
+    inputSchema: CreateMeetingLinkInputSchema,
+    outputSchema: z.string().describe("The join URL for the created meeting."),
   },
   async (input) => {
-    const { topic, startTime } = input;
+    // We use the session ID to create a unique and private room name.
+    // The prefix "Fahemny" makes it identifiable.
+    const meetingId = `Fahemny-Session-${input.sessionId}`;
     
-    // --- TEMPORARY FIX ---
-    // The real Zoom API call was failing in the server environment.
-    // To unblock the application flow and avoid confusion with Zoom's "Invalid Meeting" error,
-    // we are returning a stable, public Google Meet link. This demonstrates the linking functionality is working correctly.
-    console.log(`Creating mock meeting for topic: "${topic}" at ${startTime}`);
-    return 'https://meet.google.com/vne-ptkb-yqa';
-
-
-    /*
-    // --- ORIGINAL ZOOM API CODE ---
-    const zoomAccountId = "8440510367";
-    const zoomClientId = "YshofWq8R9KAI6MJYaPig";
-    const zoomClientSecret = "q1kJ1Tjacg3nA2dRRInS4xuYvX2H2F3e";
-
-    if (!zoomAccountId || !zoomClientId || !zoomClientSecret) {
-      throw new Error('Zoom API credentials are not set directly in the code. Please check src/ai/flows/create-zoom-meeting.ts.');
-    }
-
-    // 1. Get Access Token
-    const tokenResponse = await fetch('https://zoom.us/oauth/token', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Basic ${Buffer.from(`${zoomClientId}:${zoomClientSecret}`).toString('base64')}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            'grant_type': 'account_credentials',
-            'account_id': zoomAccountId,
-        }),
-        cache: 'no-store',
-    });
-
-    if (!tokenResponse.ok) {
-        const errorBody = await tokenResponse.text();
-        console.error("Zoom Auth Error:", errorBody);
-        throw new Error(`Failed to get Zoom access token. Status: ${tokenResponse.status}`);
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-
-    // 2. Create Meeting
-    const meetingResponse = await fetch('https://api.zoom.us/v2/users/me/meetings', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            topic: topic,
-            type: 2, // Scheduled meeting
-            start_time: startTime,
-            duration: 60, // Default to 60 minutes
-            timezone: 'UTC',
-            settings: {
-                join_before_host: true,
-                mute_upon_entry: true,
-                participant_video: true,
-                host_video: true,
-                auto_recording: 'cloud',
-            },
-        }),
-        cache: 'no-store', // Added for safety
-    });
-
-    if (!meetingResponse.ok) {
-        const errorBody = await meetingResponse.text();
-        console.error("Zoom Meeting Creation Error:", errorBody);
-        throw new Error(`Failed to create Zoom meeting. Status: ${meetingResponse.status}`);
-    }
-    
-    const meetingData = await meetingResponse.json();
-    return meetingData.join_url;
-    */
+    // Using Jitsi Meet allows for creating dynamic rooms just by crafting a URL.
+    // This is robust and avoids external API failures or key management.
+    return `https://meet.jit.si/${meetingId}`;
   }
 );
 
 // Wrapper function to be called from the client
-export async function createZoomMeeting(input: z.infer<typeof CreateZoomMeetingInputSchema>) {
-    return createZoomMeetingFlow(input);
+export async function createMeetingLink(input: CreateMeetingLinkInput) {
+    return createMeetingLinkFlow(input);
 }

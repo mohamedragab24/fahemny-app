@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createZoomMeeting } from '@/ai/flows/create-zoom-meeting';
+import { createMeetingLink } from '@/ai/flows/create-zoom-meeting';
 import { useRouter } from 'next/navigation';
 
 export default function BrowseRequestsPage() {
@@ -49,17 +49,16 @@ export default function BrowseRequestsPage() {
     setAcceptingId(request.id);
 
     try {
-      // 1. Create Zoom meeting
+      // 1. Create unique meeting link
       const topic = request.title;
-      // Combine date and time for ISO string
       const startTime = new Date(`${request.sessionDate}T${request.sessionTime}:00`).toISOString();
       
-      toast({ title: 'جارٍ إنشاء جلسة Zoom...', description: 'قد يستغرق هذا بضع لحظات.' });
+      toast({ title: 'جارٍ إنشاء رابط الجلسة...', description: 'قد يستغرق هذا بضع لحظات.' });
 
-      const meetingLink = await createZoomMeeting({ topic, startTime });
+      const meetingLink = await createMeetingLink({ topic, startTime, sessionId: request.id });
 
       if (!meetingLink) {
-        throw new Error('Failed to get meeting link from Zoom.');
+        throw new Error('Failed to get meeting link.');
       }
       
       // 2. Update Firestore document
@@ -73,7 +72,7 @@ export default function BrowseRequestsPage() {
       toast({
         variant: 'default',
         title: 'تم قبول الطلب!',
-        description: 'تم إنشاء جلسة Zoom وسيتم توجيهك لصفحة جلساتك.',
+        description: 'تم إنشاء رابط الجلسة وسيتم توجيهك لصفحة جلساتك.',
       });
 
       router.push('/sessions');
@@ -83,7 +82,7 @@ export default function BrowseRequestsPage() {
       toast({
         variant: 'destructive',
         title: 'فشل قبول الطلب',
-        description: error.message || 'حدث خطأ أثناء إنشاء جلسة Zoom أو تحديث الطلب.',
+        description: error.message || 'حدث خطأ أثناء إنشاء رابط الجلسة أو تحديث الطلب.',
       });
     } finally {
       setAcceptingId(null);
