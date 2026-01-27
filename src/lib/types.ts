@@ -7,6 +7,7 @@ export type UserProfile = {
   rating?: number;
   isVerified?: boolean;
   isAdmin?: boolean;
+  disabled?: boolean;
   createdAt: string;
 };
 

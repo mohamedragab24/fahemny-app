@@ -31,6 +31,10 @@
           "type": "number",
           "description": "The user's average rating, from 1 to 5."
         },
+        "disabled": {
+          "type": "boolean",
+          "description": "Whether the user account is disabled by an admin."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",

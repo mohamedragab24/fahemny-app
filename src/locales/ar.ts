@@ -213,6 +213,7 @@ export default {
     nav: {
         dashboard: 'لوحة المعلومات',
         users: 'إدارة المستخدمين',
+        transactions: 'المعاملات المالية',
         sessions: 'إدارة الجلسات',
     },
     access_denied: {
@@ -234,8 +235,16 @@ export default {
             email: 'البريد الإلكتروني',
             role: 'الدور',
             joined_at: 'تاريخ الانضمام',
+            status: 'الحالة',
             is_admin: 'مسؤول؟',
+            is_disabled: 'محظور؟',
         },
+    },
+    transactions: {
+        title: 'المعاملات المالية',
+        page_description: 'عرض جميع المعاملات المالية في النظام.',
+        user: 'المستخدم',
+        no_transactions: 'لا توجد معاملات لعرضها.',
     },
   },
   notifications: {

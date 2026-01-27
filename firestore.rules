@@ -7,11 +7,12 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     function isSignedIn() {
-      return request.auth != null;
+      // User must be authenticated and their profile must not be disabled.
+      return request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.disabled != true;
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth != null && request.auth.uid == userId;
     }
 
     function getUserData(userId) {
@@ -27,7 +28,7 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
-       return isSignedIn() && exists(/databases/$(database)/documents/userProfiles/$(userId)) && get(/databases/$(database)/documents/userProfiles/$(userId)).data.isAdmin == true;
+       return request.auth != null && exists(/databases/$(database)/documents/userProfiles/$(userId)) && getUserData(userId).isAdmin == true;
     }
 
     // ----------------------------------------------------------------------
@@ -36,17 +37,17 @@ service cloud.firestore {
 
     match /userProfiles/{userId} {
       allow read: if true;
-      allow list: if isSignedIn() && isAdmin(request.auth.uid);
       allow create: if isOwner(userId);
+      // Only owner or an admin can update a profile.
       allow update: if isOwner(userId) || isAdmin(request.auth.uid);
       allow delete: if false;
     }
 
     match /sessionRequests/{requestId} {
       allow get: if isSignedIn() && 
-                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId) || isOwner(resource.data.tutorId) || isAdmin(request.auth.uid));
+                    (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId) || isAdmin(request.auth.uid));
       
-      allow list: if isSignedIn() && (isTutor(request.auth.uid) || isAdmin(request.auth.uid) || isStudent(request.auth.uid));
+      allow list: if isSignedIn();
       
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
@@ -60,23 +61,27 @@ service cloud.firestore {
         // Student rates the tutor after completion
         (isOwner(resource.data.studentId) && resource.data.status == 'completed' && resource.data.tutorRating == null && request.resource.data.tutorRating != null) ||
         // Tutor rates the student after completion
-        (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null && request.resource.data.studentRating != null)
+        (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null && request.resource.data.studentRating != null) ||
+        // Admin can update anything
+        isAdmin(request.auth.uid)
       );
       
-      allow delete: if isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open';
+      allow delete: if (isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open') || isAdmin(request.auth.uid);
     }
 
     match /transactions/{transactionId} {
-        allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+        allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+        allow list: if isSignedIn(); // Queries must filter by userId on the client for non-admins.
         allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      allow update: if isSignedIn() && isOwner(resource.data.userId); // For marking as read
-      allow create: if isSignedIn(); // Should be locked down to backend functions
-      allow delete: if false;
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+      allow list: if isSignedIn(); // Queries must filter by userId on the client for non-admins.
+      allow update: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn(); // Should be locked down to backend functions/admins
+      allow delete: if isAdmin(request.auth.uid);
     }
   }
 }
