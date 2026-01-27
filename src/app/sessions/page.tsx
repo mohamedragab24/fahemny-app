@@ -64,7 +64,7 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
 
       // After submitting rating, update the average rating for the other user.
       if (ratedUserId) {
-        await updateUserAverageRating(ratedUserId);
+        await updateUserAverageRating(firestore, ratedUserId);
       }
       
       toast({ title: 'شكراً لتقييمك!', description: 'تم حفظ تقييمك بنجاح.' });
@@ -111,9 +111,7 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
 
 
 // Function to update a user's average rating
-async function updateUserAverageRating(userId: string) {
-  const firestore = useFirestore();
-  
+async function updateUserAverageRating(firestore: any, userId: string) {
   // Find all completed sessions where the user was either a student or a tutor
   const studentSessionsQuery = query(collection(firestore, 'sessionRequests'), where('studentId', '==', userId), where('status', '==', 'completed'));
   const tutorSessionsQuery = query(collection(firestore, 'sessionRequests'), where('tutorId', '==', userId), where('status', '==', 'completed'));
@@ -247,8 +245,8 @@ export default function MySessionsPage() {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
         {sessionList.map((session) => {
-            const hasStudentRated = session.tutorRating !== undefined;
-            const hasTutorRated = session.studentRating !== undefined;
+            const hasStudentRated = session.tutorRating !== undefined && session.tutorRating !== null;
+            const hasTutorRated = session.studentRating !== undefined && session.studentRating !== null;
 
           return (
           <Card key={session.id} className="flex flex-col">
@@ -272,10 +270,10 @@ export default function MySessionsPage() {
                 {session.status === 'accepted' && (
                     <>
                         <Button asChild>
-                            <a href={session.meetingLink} target="_blank" rel="noopener noreferrer">
+                            <Link href={`/session/${session.id}`}>
                                 <Video className="me-2 h-4 w-4" />
                                 دخول الجلسة
-                            </a>
+                            </Link>
                         </Button>
                         <div className="flex gap-2">
                             <Button 
