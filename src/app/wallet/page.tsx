@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Download, Wallet as WalletIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Transaction } from '@/lib/types';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -19,10 +19,15 @@ export default function WalletPage() {
   const firestore = useFirestore();
 
   const transactionsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
     [firestore, user]
   );
-  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: rawTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const transactions = useMemo(() => {
+    if (!rawTransactions) return null;
+    return [...rawTransactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawTransactions]);
 
   const currentBalance = useMemo(() => {
     if (!transactions) return 0;
