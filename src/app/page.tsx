@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import ar from "@/locales/ar";
 import { Skeleton } from '@/components/ui/skeleton';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Home() {
   const t = ar.home;
@@ -24,6 +25,8 @@ export default function Home() {
     [firestore, user]
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-background');
 
   useEffect(() => {
     // Wait for user and profile data to be loaded
@@ -111,11 +114,11 @@ export default function Home() {
             </div>
             <div className="hidden lg:block">
                 <Image
-                  src="https://picsum.photos/seed/fahemny-hero/550/550"
+                  src={heroImage?.imageUrl || "https://picsum.photos/seed/fahemny-hero/550/550"}
                   width="550"
                   height="550"
                   alt="Hero"
-                  data-ai-hint="learning education"
+                  data-ai-hint={heroImage?.imageHint || "education learning"}
                   className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last lg:aspect-square"
                 />
             </div>

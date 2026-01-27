@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Download, Wallet as WalletIcon } from 'lucide-react';
+import { PlusCircle, Wallet as WalletIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { Transaction, UserProfile } from '@/lib/types';
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
@@ -78,10 +78,6 @@ export default function WalletPage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>{t.transactions_history}</CardTitle>
-                        <Button variant="outline" size="sm" disabled>
-                            <Download className="me-2 h-4 w-4" />
-                            {t.export_button}
-                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
