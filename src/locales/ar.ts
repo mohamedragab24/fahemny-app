@@ -60,7 +60,7 @@ export default {
     about: {
       heading: 'عن المنصة',
       vision_title: 'رؤية المنصة',
-      vision_description: 'أن تصبح "فَهِّمْني" المنصة العربية الأولى للاستفهام والتفهيم السريع، بديلاً آمناً ومنظماً للتواصل العشوائي خارج المنصات.',
+      vision_description: 'أن تصبح "فَهِّمْني" المنصة العربية الأولى للاستفهام والتفهيم السريع, بديلاً آمناً ومنظماً للتواصل العشوائي خارج المنصات.',
       mission_title: 'رسالة المنصة',
       mission_description: 'تسهيل الوصول للمعرفة العملية، ضمان حقوق جميع الأطراف، وخلق بيئة عادلة وشفافة للدخل القائم على الخبرة.',
     },
@@ -182,7 +182,7 @@ export default {
     no_transactions: 'لا توجد معاملات لعرضها.',
     current_balance_title: 'رصيدك الحالي',
     current_balance_description: 'هذا هو المبلغ المتاح في حسابك.',
-    withdraw_button: 'سحب الأرباح (قريباً)',
+    withdraw_button: 'سحب الأرباح',
     table: {
         description: 'الوصف',
         type: 'النوع',
@@ -206,7 +206,21 @@ export default {
         submitting_button: 'جارٍ التحضير...',
         success_toast_title: 'تمت العملية بنجاح!',
         success_toast_description: 'تمت إضافة المبلغ إلى رصيدك.',
-    }
+    },
+    withdraw: {
+        title: 'طلب سحب رصيد',
+        description: 'يمكنك طلب سحب المبلغ المتاح في رصيدك. ستتم مراجعة الطلب من قبل الإدارة.',
+        amount_label: 'المبلغ المراد سحبه',
+        amount_error: 'المبلغ المطلوب أكبر من الرصيد المتاح.',
+        min_amount_error: 'الحد الأدنى للسحب هو 100 جنيه.',
+        details_label: 'بيانات التحويل',
+        details_placeholder: 'مثال: رقم Instapay أو رقم فودافون كاش',
+        details_error: 'الرجاء إدخال بيانات التحويل.',
+        submit_button: 'إرسال طلب السحب',
+        submitting_button: 'جارٍ الإرسال...',
+        success_toast_title: 'تم إرسال طلبك!',
+        success_toast_description: 'ستتم مراجعة طلب السحب الخاص بك قريبًا.',
+    },
   },
   admin: {
     title: 'لوحة التحكم',
@@ -215,6 +229,7 @@ export default {
         users: 'إدارة المستخدمين',
         transactions: 'المعاملات المالية',
         sessions: 'إدارة الجلسات',
+        withdrawals: 'طلبات السحب',
     },
     access_denied: {
         title: 'الوصول مرفوض',
@@ -246,11 +261,54 @@ export default {
         user: 'المستخدم',
         no_transactions: 'لا توجد معاملات لعرضها.',
     },
+    sessions: {
+        title: 'إدارة الجلسات',
+        page_description: 'عرض ومراقبة جميع الجلسات في النظام.',
+        no_sessions: 'لا توجد جلسات لعرضها.',
+        table: {
+            title: 'العنوان',
+            student: 'المستفهم',
+            tutor: 'المفهّم',
+            status: 'الحالة',
+            price: 'السعر',
+            date: 'التاريخ',
+        }
+    },
+    withdrawals: {
+        title: 'طلبات السحب',
+        page_description: 'مراجعة طلبات سحب الأرصدة من المفهّمين.',
+        no_requests: 'لا توجد طلبات سحب حاليًا.',
+        approve_dialog_title: 'تأكيد الموافقة',
+        approve_dialog_description: 'هل أنت متأكد من أنك قمت بتحويل مبلغ {amount} جنيه إلى {userName}؟ لا يمكن التراجع عن هذا الإجراء.',
+        reject_dialog_title: 'تأكيد الرفض',
+        reject_dialog_description: 'أدخل سبب الرفض (اختياري). سيتم إعلام المستخدم.',
+        admin_notes_placeholder: 'سبب الرفض...',
+        table: {
+            user: 'المستخدم',
+            amount: 'المبلغ',
+            details: 'بيانات التحويل',
+            date: 'تاريخ الطلب',
+            status: 'الحالة',
+            actions: 'الإجراءات',
+        },
+    }
   },
   notifications: {
     title: 'الإشعارات',
     no_notifications: 'لا توجد إشعارات جديدة.',
     request_accepted_title: 'تم قبول طلبك!',
     request_accepted_message: 'لقد قبل المفهّم "{tutorName}" طلبك لجلسة "{sessionTitle}".',
+    new_withdrawal_request_title: 'طلب سحب جديد',
+    new_withdrawal_request_message: 'طلب سحب جديد من {userName} بمبلغ {amount} جنيه.',
+    withdrawal_approved_title: 'تمت الموافقة على طلب السحب',
+    withdrawal_approved_message: 'تمت الموافقة على طلب السحب الخاص بك بمبلغ {amount} جنيه.',
+    withdrawal_rejected_title: 'تم رفض طلب السحب',
+    withdrawal_rejected_message: 'تم رفض طلب السحب الخاص بك. السبب: {reason}',
   },
+  browse_requests: {
+    search_placeholder: 'ابحث بعنوان الطلب...',
+    filter_by_field: 'تصفية حسب المجال',
+    all_fields: 'كل المجالات',
+    price_range: 'نطاق السعر',
+  }
 } as const;

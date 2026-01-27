@@ -48,3 +48,14 @@ export type Notification = {
   isRead: boolean;
   createdAt: string;
 };
+
+export type WithdrawalRequest = {
+    id: string;
+    userId: string;
+    userName: string; // Denormalized for admin display
+    amount: number;
+    status: 'pending' | 'approved' | 'rejected';
+    createdAt: string;
+    details: string; // For withdrawal details like Instapay/Vodafone Cash
+    adminNotes?: string; // For admin when rejecting
+};

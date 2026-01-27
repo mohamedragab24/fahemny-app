@@ -10,6 +10,9 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     function isAdmin() {
+      // In a real app, this should be a custom claim, not a document read.
+      // Reading a document in rules can be slow and costly.
+      // For this project, it's a simple way to manage admins.
       return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true;
     }
 
@@ -32,38 +35,50 @@ service cloud.firestore {
     // - Only the involved student or tutor, or an admin, can update a request.
     match /sessionRequests/{requestId} {
       allow create: if isAuth() && request.resource.data.studentId == request.auth.uid;
-      allow read: if isAuth();
-      // List is implicitly allowed by the read rule, queries must be specific.
+      // get/list are separate. 'get' is for a single document.
+      allow get: if isAuth();
+      // 'list' is for collections. Client query must be secure.
+      // Tutors query open sessions. Students/Tutors query their own sessions. Admins query all.
+      // We allow the 'list' and rely on client query constraints.
       allow list: if isAuth();
       allow update: if isAuth() && (
         isOwner(resource.data.studentId) || 
         (resource.data.tutorId != null && isOwner(resource.data.tutorId)) ||
         isAdmin()
       );
+      // Prevent deletion, status should be 'cancelled' instead.
       allow delete: if false;
     }
     
     // Transactions
     // - System (via client) creates transactions. User can only create for themselves.
-    // - Users can only read their own transactions.
+    // - Users can only read/list their own transactions.
     // - Admins can read/list all transactions.
     match /transactions/{transactionId} {
       allow create: if isAuth() && isOwner(request.resource.data.userId);
-      // Read is for a single document, list is for collections.
-      // List query must be constrained by 'userId' in the client code.
-      allow read: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
-      allow list: if isAuth() && isAdmin();
+      // read for single doc, list for collection. Client query must filter by userId.
+      allow get, list: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update, delete: if false; // Transactions are immutable
     }
 
     // Notifications
     // - System (via client) creates notifications. Must be for the recipient.
-    // - Users can read, update (mark as read), and delete their own notifications.
+    // - Users can read/list, update (mark as read), and delete their own notifications.
     match /notifications/{notificationId} {
-       allow create: if isAuth() && isOwner(request.resource.data.userId);
-       allow read, update, delete: if isAuth() && isOwner(resource.data.userId);
-       // The client query must filter by userId, which is enforced by the `read` rule above.
-       allow list: if isAuth();
+       allow create: if isAuth(); // Can be created by system for a user
+       // read/list for collection. Client query must filter by userId.
+       allow get, list, update, delete: if isAuth() && isOwner(resource.data.userId);
+    }
+
+    // Withdrawal Requests
+    // - Users can create their own requests.
+    // - Users can read their own requests.
+    // - Admins can read, list, and update all requests.
+    match /withdrawalRequests/{withdrawalId} {
+      allow create: if isAuth() && isOwner(request.resource.data.userId);
+      allow get, list: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+      allow update: if isAuth() && isAdmin(); // Only admins can approve/reject
+      allow delete: if false;
     }
   }
 }

@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Download, Wallet as WalletIcon } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import type { Transaction } from '@/lib/types';
-import { collection, query, where } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import type { Transaction, UserProfile } from '@/lib/types';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -18,6 +18,12 @@ export default function WalletPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   const transactionsQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
     [firestore, user]
@@ -25,7 +31,7 @@ export default function WalletPage() {
   const { data: rawTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
   const transactions = useMemo(() => {
-    if (!rawTransactions) return null;
+    if (!rawTransactions) return [];
     return [...rawTransactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [rawTransactions]);
 
@@ -44,7 +50,7 @@ export default function WalletPage() {
     }
   };
 
-  const isLoading = isUserLoading || isLoadingTransactions;
+  const isLoading = isUserLoading || isLoadingTransactions || isProfileLoading;
 
   if (isLoading) {
     return (
@@ -131,9 +137,13 @@ export default function WalletPage() {
                     <p className="text-4xl font-bold text-primary">{currentBalance.toFixed(2)}</p>
                     <p className="text-muted-foreground">جنيه مصري</p>
                 </CardContent>
-                <CardFooter>
-                    <Button className="w-full" disabled>{t.withdraw_button}</Button>
-                </CardFooter>
+                {userProfile?.role === 'tutor' && (
+                    <CardFooter>
+                         <Button asChild className="w-full" disabled={currentBalance <= 0}>
+                            <Link href="/wallet/withdraw">{t.withdraw_button}</Link>
+                         </Button>
+                    </CardFooter>
+                )}
             </Card>
         </div>
       </div>

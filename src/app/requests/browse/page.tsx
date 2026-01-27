@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
@@ -12,14 +12,22 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
+  const t_browse = ar.browse_requests;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedField, setSelectedField] = useState('all');
+  const [priceRange, setPriceRange] = useState([0, 1000]);
+  
   const t_notifications = ar.notifications;
 
   const userProfileRef = useMemoFirebase(
@@ -40,6 +48,22 @@ export default function BrowseRequestsPage() {
 
   const { data: requests, isLoading: isLoadingRequests } = useCollection<SessionRequest>(requestsQuery);
 
+  const availableFields = useMemo(() => {
+    if (!requests) return [];
+    const fields = new Set(requests.map(r => r.field));
+    return Array.from(fields);
+  }, [requests]);
+
+  const filteredRequests = useMemo(() => {
+    if (!requests) return [];
+    return requests.filter(request => {
+      const searchMatch = searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const fieldMatch = selectedField === 'all' || request.field === selectedField;
+      const priceMatch = request.price >= priceRange[0] && request.price <= priceRange[1];
+      return searchMatch && fieldMatch && priceMatch;
+    });
+  }, [requests, searchTerm, selectedField, priceRange]);
+
 
   const handleAccept = async (request: SessionRequest) => {
     if (!user || !userProfile) {
@@ -52,7 +76,6 @@ export default function BrowseRequestsPage() {
     try {
       const requestRef = doc(firestore, 'sessionRequests', request.id);
       
-      // Generate a predictable Jitsi meeting link. The session page will handle JWT generation.
       const meetingLink = `https://meet.jit.si/Fahemny-Session-${request.id}`;
       
       updateDocumentNonBlocking(requestRef, {
@@ -61,7 +84,6 @@ export default function BrowseRequestsPage() {
         meetingLink: meetingLink,
       });
 
-      // Create notification for the student
       const notificationsCol = collection(firestore, 'notifications');
       addDocumentNonBlocking(notificationsCol, {
         userId: request.studentId,
@@ -131,9 +153,44 @@ export default function BrowseRequestsPage() {
     <div className="container py-8">
       <h1 className="text-3xl font-bold font-headline mb-6">{t.browse_requests}</h1>
 
-      {requests && requests.length > 0 ? (
+      <div className="mb-8 p-4 border rounded-lg bg-secondary/50 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div className="md:col-span-1">
+          <label className="text-sm font-medium mb-2 block">{t_browse.search_placeholder}</label>
+          <Input 
+            placeholder={t_browse.search_placeholder}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="md:col-span-1">
+          <label className="text-sm font-medium mb-2 block">{t_browse.filter_by_field}</label>
+          <Select value={selectedField} onValueChange={setSelectedField}>
+            <SelectTrigger>
+              <SelectValue placeholder={t_browse.filter_by_field} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t_browse.all_fields}</SelectItem>
+              {availableFields.map(field => (
+                <SelectItem key={field} value={field}>{field}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="md:col-span-1">
+          <label className="text-sm font-medium mb-2 block">{t_browse.price_range}: <span className="font-bold text-primary">{priceRange[0]} - {priceRange[1]} جنيه</span></label>
+          <Slider
+            min={0}
+            max={1000}
+            step={50}
+            value={[priceRange[1]]}
+            onValueChange={value => setPriceRange([priceRange[0], value[0]])}
+          />
+        </div>
+      </div>
+
+      {filteredRequests && filteredRequests.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {requests.map((request) => (
+          {filteredRequests.map((request) => (
             <Card key={request.id} className="flex flex-col">
               <CardHeader>
                 <CardTitle>{request.title}</CardTitle>
@@ -165,7 +222,7 @@ export default function BrowseRequestsPage() {
         </div>
       ) : (
         <div className="border rounded-lg p-8 text-center bg-secondary/50 mt-8">
-          <p className="text-muted-foreground">لا توجد طلبات شرح متاحة حاليًا. حاول مرة أخرى لاحقًا.</p>
+          <p className="text-muted-foreground">لا توجد طلبات شرح متاحة تطابق معايير البحث. حاول مرة أخرى لاحقًا.</p>
         </div>
       )}
     </div>

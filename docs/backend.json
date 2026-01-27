@@ -227,6 +227,23 @@
         "isRead",
         "createdAt"
       ]
+    },
+    "WithdrawalRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WithdrawalRequest",
+      "type": "object",
+      "description": "Represents a request from a tutor to withdraw funds.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "details": { "type": "string", "description": "Payment details provided by user (e.g. Instapay address)" },
+        "adminNotes": { "type": "string", "description": "Notes from admin (e.g. reason for rejection)" }
+      },
+      "required": ["id", "userId", "userName", "amount", "status", "createdAt", "details"]
     }
   },
   "auth": {
@@ -240,9 +257,7 @@
         "path": "/userProfiles/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
           "description": "Stores user profile information."
         }
       },
@@ -250,9 +265,7 @@
         "path": "/sessionRequests/{requestId}",
         "definition": {
           "entityName": "SessionRequest",
-          "schema": {
-            "$ref": "#/backend/entities/SessionRequest"
-          },
+          "schema": { "$ref": "#/backend/entities/SessionRequest" },
           "description": "Stores all session requests created by students."
         }
       },
@@ -260,9 +273,7 @@
         "path": "/transactions/{transactionId}",
         "definition": {
           "entityName": "Transaction",
-          "schema": {
-            "$ref": "#/backend/entities/Transaction"
-          },
+          "schema": { "$ref": "#/backend/entities/Transaction" },
           "description": "Stores all wallet transactions for all users."
         }
       },
@@ -270,13 +281,19 @@
         "path": "/notifications/{notificationId}",
         "definition": {
           "entityName": "Notification",
-          "schema": {
-            "$ref": "#/backend/entities/Notification"
-          },
+          "schema": { "$ref": "#/backend/entities/Notification" },
           "description": "Stores user notifications."
+        }
+      },
+      {
+        "path": "/withdrawalRequests/{withdrawalId}",
+        "definition": {
+            "entityName": "WithdrawalRequest",
+            "schema": { "$ref": "#/backend/entities/WithdrawalRequest" },
+            "description": "Stores tutor withdrawal requests."
         }
       }
     ],
-    "reasoning": "The Firestore structure is simplified for the FAHEMNY app. It consists of two main collections: `userProfiles` for storing user data including their role (student or tutor), and `sessionRequests` for all tutoring requests. This flat structure is efficient for querying. `sessionRequests` can be queried by tutors, and students can view their own requests. Security rules will manage access based on user roles and ownership."
+    "reasoning": "The Firestore structure is simplified for the FAHEMNY app. It consists of several collections for users, sessions, transactions, notifications, and withdrawal requests. This flat structure is efficient for querying. Security rules will manage access based on user roles and ownership."
   }
 }
