@@ -4,11 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
-import { generateJitsiJwt } from '@/ai/flows/generate-jitsi-jwt';
+import { generateJitsiJwt, type GenerateJitsiJwtOutput } from '@/ai/flows/generate-jitsi-jwt';
 import { doc } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Loader2 } from 'lucide-react';
 import ar from '@/locales/ar';
 
 declare global {
@@ -25,6 +24,7 @@ export default function SessionPage() {
     const jitsiContainerRef = useRef<HTMLDivElement>(null);
     const [jitsiApi, setJitsiApi] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const sessionRef = useMemoFirebase(
         () => (firestore && sessionId ? doc(firestore, 'sessionRequests', sessionId) : null),
@@ -39,52 +39,54 @@ export default function SessionPage() {
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
     useEffect(() => {
-        // Function to load the Jitsi script
-        const loadJitsiScript = () => {
-            if (window.JitsiMeetExternalAPI) {
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = 'https://8x8.vc/vpaas-magic-cookie-1fbd16d85bf84be0aaba7317c17f25dd/external_api.js';
-            script.async = true;
-            document.head.appendChild(script);
-        };
-        
-        loadJitsiScript();
-        
-        // Cleanup function for when the component unmounts
-        return () => {
-            jitsiApi?.dispose();
-        };
-    }, [jitsiApi]);
+        let script: HTMLScriptElement | null = null;
 
-
-    useEffect(() => {
-        if (jitsiApi || !session || !userProfile || typeof window.JitsiMeetExternalAPI === 'undefined') {
-            return;
-        }
+        const loadJitsiScript = (scriptUrl: string): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                if (window.JitsiMeetExternalAPI) {
+                    return resolve();
+                }
+                script = document.createElement('script');
+                script.src = scriptUrl;
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('Failed to load Jitsi script.'));
+                document.head.appendChild(script);
+            });
+        };
 
         const initializeJitsi = async () => {
+             if (isUserLoading || isSessionLoading || isProfileLoading || !session || !userProfile || !user || jitsiApi) {
+                return;
+            }
+
             try {
-                const roomName = `vpaas-magic-cookie-1fbd16d85bf84be0aaba7317c17f25dd/FahemnySession-${sessionId}`;
+                setIsLoading(true);
+                const roomName = `Fahemny-Session-${sessionId}`; 
                 const isModerator = user.uid === session.tutorId;
 
-                const jwt = await generateJitsiJwt({
+                const jitsiConfig: GenerateJitsiJwtOutput = await generateJitsiJwt({
                     roomName: roomName,
                     userId: user.uid,
                     userName: userProfile.name,
                     userEmail: userProfile.email,
                     isModerator: isModerator,
                 });
-                
-                if (!jwt) {
-                    throw new Error("Failed to generate session token.");
+
+                if (!jitsiConfig?.jwt || !jitsiConfig.scriptUrl) {
+                    throw new Error("Failed to get session configuration from server.");
+                }
+
+                await loadJitsiScript(jitsiConfig.scriptUrl);
+
+                if (typeof window.JitsiMeetExternalAPI === 'undefined') {
+                    throw new Error("Jitsi API not found after loading script.");
                 }
 
                 const options = {
-                    roomName: roomName,
+                    roomName: jitsiConfig.fullRoomName,
                     parentNode: jitsiContainerRef.current,
-                    jwt: jwt,
+                    jwt: jitsiConfig.jwt,
                     height: '100%',
                     width: '100%',
                     configOverwrite: {
@@ -106,62 +108,39 @@ export default function SessionPage() {
                     },
                 };
                 
-                const api = new window.JitsiMeetExternalAPI("8x8.vc", options);
+                const api = new window.JitsiMeetExternalAPI(jitsiConfig.jitsiServer, options);
+                api.on('iframeReady', () => setIsLoading(false));
                 setJitsiApi(api);
 
             } catch (e: any) {
                 console.error("Failed to initialize Jitsi:", e);
                 setError(e.message || "Could not start video session.");
+                setIsLoading(false);
             }
         };
 
-        const script = document.querySelector('script[src="https://8x8.vc/vpaas-magic-cookie-1fbd16d85bf84be0aaba7317c17f25dd/external_api.js"]');
-        if (script) {
-            script.onload = initializeJitsi;
-        } else {
-            initializeJitsi();
-        }
+        initializeJitsi();
+        
+        return () => {
+            jitsiApi?.dispose();
+            if (script && document.head.contains(script)) {
+                document.head.removeChild(script);
+            }
+        };
 
-    }, [jitsiApi, session, userProfile, sessionId, user]);
-
-    if (isUserLoading || isSessionLoading || isProfileLoading) {
+    }, [jitsiApi, session, userProfile, sessionId, user, isUserLoading, isSessionLoading, isProfileLoading]);
+    
+    if (isLoading || isUserLoading || isSessionLoading || isProfileLoading) {
         return (
-            <div className="flex h-screen w-screen items-center justify-center">
-                <Skeleton className="h-full w-full" />
+            <div className="flex h-screen w-screen items-center justify-center bg-background">
+                 <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-muted-foreground">جارٍ تحضير الجلسة...</p>
+                 </div>
             </div>
         );
     }
     
-    if (error) {
-        const isPrivateKeyError = error.includes('Jitsi private key is not set');
-
-        return (
-             <div className="container mx-auto py-16 px-4">
-                <Alert variant="destructive">
-                    <Terminal className="h-4 w-4" />
-                     <AlertTitle>
-                         {isPrivateKeyError ? 'إعدادات الجلسة غير مكتملة' : 'خطأ في بدء الجلسة'}
-                    </AlertTitle>
-                    <AlertDescription>
-                        {isPrivateKeyError ? (
-                            <>
-                                <p className="mb-2">يبدو أن المفتاح الخاص بخدمة الفيديو (Jitsi/8x8) لم يتم إعداده بعد.</p>
-                                <p>هذا المفتاح ضروري لتأمين الجلسات. يرجى مراجعة الإعدادات في الملف التالي والتأكد من إضافة المفتاح الصحيح:</p>
-                                <code className="block bg-muted p-2 rounded-md my-2 text-sm font-mono break-all">src/ai/flows/generate-jitsi-jwt.ts</code>
-                            </>
-                        ) : (
-                            <>
-                                <p>لم نتمكن من بدء جلسة الفيديو. الرجاء المحاولة مرة أخرى لاحقًا.</p>
-                                <p className="text-xs mt-4 font-mono">{error}</p>
-                            </>
-                        )}
-                    </AlertDescription>
-                </Alert>
-            </div>
-        )
-    }
-
-    // Check if current user is part of the session
     if (user && session && user.uid !== session.studentId && user.uid !== session.tutorId) {
         return (
              <div className="container mx-auto py-16 px-4">
@@ -175,6 +154,35 @@ export default function SessionPage() {
             </div>
         )
     }
+    
+    if (error) {
+        const isConfigError = error.includes('Jitsi App ID or Private Key is not set');
+        return (
+             <div className="container mx-auto py-16 px-4">
+                <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                     <AlertTitle>
+                         {isConfigError ? 'خطأ في إعدادات خدمة الفيديو' : 'خطأ في بدء الجلسة'}
+                    </AlertTitle>
+                    <AlertDescription>
+                        {isConfigError ? (
+                            <>
+                                <p className="mb-2">يبدو أن بيانات الاعتماد لخدمة الفيديو (Jitsi/8x8) غير مكتملة في متغيرات البيئة.</p>
+                                <p>هذه البيانات ضرورية لتأمين الجلسات. يرجى مراجعة ملف `.env.local` والتأكد من إضافة `JITSI_APP_ID` و `JITSI_PRIVATE_KEY` بشكل صحيح.</p>
+                            </>
+                        ) : (
+                            <>
+                                <p>لم نتمكن من بدء جلسة الفيديو. الرجاء المحاولة مرة أخرى لاحقًا.</p>
+                                <p className="text-xs mt-4 font-mono">{error}</p>
+                            </>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            </div>
+        )
+    }
 
-    return <div id="jaas-container" ref={jitsiContainerRef} className="h-screen w-screen" />;
+    return (
+        <div id="jaas-container" ref={jitsiContainerRef} className="h-screen w-screen" />
+    );
 }

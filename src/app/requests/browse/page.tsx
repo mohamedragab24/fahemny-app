@@ -52,6 +52,7 @@ export default function BrowseRequestsPage() {
     try {
       const requestRef = doc(firestore, 'sessionRequests', request.id);
       
+      // Generate a predictable Jitsi meeting link. The session page will handle JWT generation.
       const meetingLink = `https://meet.jit.si/Fahemny-Session-${request.id}`;
       
       updateDocumentNonBlocking(requestRef, {

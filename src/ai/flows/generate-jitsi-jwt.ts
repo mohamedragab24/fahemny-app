@@ -13,38 +13,47 @@ const GenerateJitsiJwtInputSchema = z.object({
   userEmail: z.string().email().describe("The user's email address."),
   userAvatar: z.string().url().optional().describe("URL to the user's avatar image."),
   isModerator: z.boolean().describe("Whether the user should join as a moderator."),
-  roomName: z.string().describe("The name of the room the user is joining."),
+  roomName: z.string().describe("The unique name of the room the user is joining."),
+});
+
+const GenerateJitsiJwtOutputSchema = z.object({
+  jwt: z.string().describe("The generated JSON Web Token."),
+  scriptUrl: z.string().describe("The URL for the Jitsi External API script."),
+  jitsiServer: z.string().describe("The Jitsi server domain."),
+  fullRoomName: z.string().describe("The full room name for the Jitsi meeting."),
 });
 
 export type GenerateJitsiJwtInput = z.infer<typeof GenerateJitsiJwtInputSchema>;
+export type GenerateJitsiJwtOutput = z.infer<typeof GenerateJitsiJwtOutputSchema>;
 
-// IMPORTANT: Replace with your actual Jitsi/8x8 App ID and Private Key.
-// You can get these from your 8x8 JaaS account dashboard.
-const JITSI_APP_ID = "vpaas-magic-cookie-1fbd16d85bf84be0aaba7317c17f25dd/474ff9-SAMPLE_APP";
-const JITSI_PRIVATE_KEY = `
------BEGIN PRIVATE KEY-----
-PLACE YOUR 8x8 JAAS PRIVATE KEY HERE
------END PRIVATE KEY-----
-`;
+
+// Securely load credentials from environment variables
+const JITSI_APP_ID = process.env.JITSI_APP_ID;
+const JITSI_PRIVATE_KEY = process.env.JITSI_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const JITSI_SERVER = "8x8.vc";
+
 
 export const generateJitsiJwtFlow = ai.defineFlow(
   {
     name: 'generateJitsiJwtFlow',
     inputSchema: GenerateJitsiJwtInputSchema,
-    outputSchema: z.string().describe("The generated JSON Web Token."),
+    outputSchema: GenerateJitsiJwtOutputSchema,
   },
   async (input) => {
-    if (!JITSI_PRIVATE_KEY.includes('PRIVATE KEY')) {
-         throw new Error('Jitsi private key is not set. Please update it in src/ai/flows/generate-jitsi-jwt.ts');
+    if (!JITSI_APP_ID || !JITSI_PRIVATE_KEY) {
+         throw new Error('Jitsi App ID or Private Key is not set in environment variables. Please check your .env.local file.');
     }
     
+    const jitsiScriptUrl = `https://${JITSI_SERVER}/${JITSI_APP_ID}/external_api.js`;
+    const fullRoomName = `${JITSI_APP_ID}/${input.roomName}`;
+
     const payload = {
       aud: 'jitsi',
       iss: 'chat',
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60), // 2 hours expiration
       nbf: Math.floor(Date.now() / 1000) - 10, // 10 seconds tolerance
-      sub: JITSI_APP_ID.split('/')[0],
+      sub: JITSI_APP_ID,
       context: {
         features: {
           "recording": true,
@@ -59,7 +68,7 @@ export const generateJitsiJwtFlow = ai.defineFlow(
           moderator: input.isModerator,
         },
       },
-      room: input.roomName,
+      room: "*", // Use wildcard for room to allow joining any room with this token
     };
     
     const token = jwt.sign(payload, JITSI_PRIVATE_KEY, {
@@ -71,11 +80,16 @@ export const generateJitsiJwtFlow = ai.defineFlow(
         }
     });
 
-    return token;
+    return {
+      jwt: token,
+      scriptUrl: jitsiScriptUrl,
+      jitsiServer: JITSI_SERVER,
+      fullRoomName: fullRoomName,
+    };
   }
 );
 
 // Wrapper function to be called from the client
-export async function generateJitsiJwt(input: GenerateJitsiJwtInput) {
+export async function generateJitsiJwt(input: GenerateJitsiJwtInput): Promise<GenerateJitsiJwtOutput> {
     return generateJitsiJwtFlow(input);
 }
