@@ -27,7 +27,7 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
-      return isSignedIn() && getUserData(userId).isAdmin == true;
+      return isSignedIn() && exists(/databases/$(database)/documents/userProfiles/$(userId)) && get(/databases/$(database)/documents/userProfiles/$(userId)).data.isAdmin == true;
     }
 
     // ----------------------------------------------------------------------
@@ -63,16 +63,16 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
         allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        allow list: if isSignedIn(); // Client must filter by userId
+        // Client must filter by userId. Query is validated against 'get' rule.
         allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow get, list: if isSignedIn() && isOwner(resource.data.userId);
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      // Queries are validated against 'get' rule. Client must filter by userId.
       allow update: if isSignedIn() && isOwner(resource.data.userId); // For marking as read
-      // Allow creation of notifications by any signed in user.
-      // In a production app, this should be locked down to backend functions.
+      // Allow creation of notifications. Should be locked down to backend functions.
       allow create: if isSignedIn();
       allow delete: if false;
     }
