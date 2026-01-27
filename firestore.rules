@@ -59,8 +59,10 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // Allow authenticated users to read. Security is enforced by client-side queries.
-      allow read: if isAuth();
+      // Allow authenticated users to list their own transactions.
+      allow list: if isAuth();
+      // Allow user to get their own transaction.
+      allow get: if isAuth() && isOwner(resource.data.userId);
 
       // A user can only create their own transaction.
       allow create: if isAuth() && isOwner(request.resource.data.userId);
@@ -70,10 +72,12 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      // Allow authenticated users to read. Security is enforced by client-side queries.
-      allow read: if isAuth();
+      // Allow authenticated users to list their own notifications.
+      allow list: if isAuth();
+      // Allow user to get their own notification.
+      allow get: if isAuth() && isOwner(resource.data.userId);
       
-      // System/User can create a notification for a user.
+      // Users can create their own notifications (e.g. system).
       allow create: if isAuth() && isOwner(request.resource.data.userId); 
       
       // Users can update their own notifications (e.g. to mark as read).

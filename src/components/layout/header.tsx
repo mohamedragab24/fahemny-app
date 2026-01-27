@@ -39,6 +39,7 @@ import ar from "@/locales/ar";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { formatDistanceToNow } from 'date-fns';
 import { ar as arLocale } from 'date-fns/locale';
+import { useMemo } from "react";
 
 type Translations = typeof ar.header;
 
@@ -59,12 +60,17 @@ export default function Header({ translations: t }: { translations: Translations
     () => user ? query(
         collection(firestore, 'notifications'), 
         where('userId', '==', user.uid), 
-        orderBy('createdAt', 'desc'), 
         limit(10)
     ) : null,
     [firestore, user]
   );
-  const { data: notifications } = useCollection<Notification>(notificationsQuery);
+  const { data: notificationsFromHook } = useCollection<Notification>(notificationsQuery);
+
+  const notifications = useMemo(() => {
+    if (!notificationsFromHook) return null;
+    return [...notificationsFromHook].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [notificationsFromHook]);
+
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
   const handleNotificationClick = (notification: Notification) => {
