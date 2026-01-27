@@ -37,3 +37,13 @@ export type Transaction = {
   sessionId?: string;
   createdAt: string;
 };
+
+export type Notification = {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+};

@@ -238,4 +238,10 @@ export default {
         },
     },
   },
+  notifications: {
+    title: 'الإشعارات',
+    no_notifications: 'لا توجد إشعارات جديدة.',
+    request_accepted_title: 'تم قبول طلبك!',
+    request_accepted_message: 'لقد قبل المفهّم "{tutorName}" طلبك لجلسة "{sessionTitle}".',
+  },
 } as const;

@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
@@ -20,6 +20,7 @@ export default function BrowseRequestsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const t_notifications = ar.notifications;
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -41,7 +42,7 @@ export default function BrowseRequestsPage() {
 
 
   const handleAccept = async (request: SessionRequest) => {
-    if (!user) {
+    if (!user || !userProfile) {
       toast({ variant: 'destructive', title: 'خطأ', description: 'يجب أن تكون مسجلاً للدخول لقبول الطلبات.' });
       return;
     }
@@ -51,7 +52,6 @@ export default function BrowseRequestsPage() {
     try {
       const requestRef = doc(firestore, 'sessionRequests', request.id);
       
-      // Generate a unique, dynamic Jitsi link for each session
       const meetingLink = `https://meet.jit.si/Fahemny-Session-${request.id}`;
       
       updateDocumentNonBlocking(requestRef, {
@@ -60,10 +60,23 @@ export default function BrowseRequestsPage() {
         meetingLink: meetingLink,
       });
 
+      // Create notification for the student
+      const notificationsCol = collection(firestore, 'notifications');
+      addDocumentNonBlocking(notificationsCol, {
+        userId: request.studentId,
+        title: t_notifications.request_accepted_title,
+        message: t_notifications.request_accepted_message
+          .replace('{tutorName}', userProfile.name)
+          .replace('{sessionTitle}', request.title),
+        link: '/sessions',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+
       toast({
         variant: 'default',
         title: 'تم قبول الطلب!',
-        description: 'تم إنشاء رابط الجلسة الفريد وتوجيهك لصفحة جلساتك.',
+        description: 'تم إنشاء رابط الجلسة الفريد وإشعار الطالب.',
       });
 
       router.push('/sessions');

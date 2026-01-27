@@ -67,5 +67,14 @@ service cloud.firestore {
         allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
+
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() && isOwner(resource.data.userId);
+      allow update: if isSignedIn() && isOwner(resource.data.userId); // For marking as read
+      // Allow creation of notifications by any signed in user.
+      // In a production app, this should be locked down to backend functions.
+      allow create: if isSignedIn();
+      allow delete: if false;
+    }
   }
 }

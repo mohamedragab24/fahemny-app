@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import {
   BrainCircuit,
   Menu,
-  MessageSquare,
   User,
   LogOut,
   ShieldCheck,
   LifeBuoy,
   Wallet,
   PlusCircle,
-  LayoutGrid
+  LayoutGrid,
+  Bell,
 } from "lucide-react";
 import {
   Sheet,
@@ -22,7 +22,7 @@ import {
   SheetClose,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
@@ -33,9 +33,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { UserProfile } from "@/lib/types";
-import { doc } from "firebase/firestore";
+import type { UserProfile, Notification } from "@/lib/types";
+import { doc, collection, query, where, orderBy, limit } from "firebase/firestore";
 import ar from "@/locales/ar";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { formatDistanceToNow } from 'date-fns';
+import { ar as arLocale } from 'date-fns/locale';
 
 type Translations = typeof ar.header;
 
@@ -44,12 +47,35 @@ export default function Header({ translations: t }: { translations: Translations
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
+  const t_notifications = ar.notifications;
 
   const userProfileRef = useMemoFirebase(
     () => user ? doc(firestore, 'userProfiles', user.uid) : null,
     [firestore, user]
   );
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const notificationsQuery = useMemoFirebase(
+    () => user ? query(
+        collection(firestore, 'notifications'), 
+        where('userId', '==', user.uid), 
+        orderBy('createdAt', 'desc'), 
+        limit(10)
+    ) : null,
+    [firestore, user]
+  );
+  const { data: notifications } = useCollection<Notification>(notificationsQuery);
+  const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.isRead) {
+      const notifRef = doc(firestore, 'notifications', notification.id);
+      updateDocumentNonBlocking(notifRef, { isRead: true });
+    }
+    if (notification.link) {
+      router.push(notification.link);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -98,48 +124,92 @@ export default function Header({ translations: t }: { translations: Translations
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
           {isUserLoading ? (
-            <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
+            <div className="flex items-center space-x-2">
+                <div className="h-9 w-9 bg-muted rounded-full animate-pulse" />
+                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+            </div>
           ) : user && userProfile ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile.photoURL || undefined} alt={userProfile.name} />
-                    <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userProfile.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>{t.userMenu.profile}</span>
-                </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => router.push('/sessions')}>
-                    <BrainCircuit className="mr-2 h-4 w-4" />
-                    <span>{t.links.my_sessions}</span>
-                </DropdownMenuItem>
-                {userProfile.isAdmin && (
-                  <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    <span>{t.links.admin_dashboard}</span>
+            <>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-9 w-9 rounded-full" size="icon">
+                          <Bell className="h-5 w-5" />
+                          {unreadCount > 0 && (
+                              <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                              </span>
+                          )}
+                          <span className="sr-only">{t_notifications.title}</span>
+                      </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 md:w-96">
+                      <DropdownMenuLabel>{t_notifications.title}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {notifications && notifications.length > 0 ? (
+                          <div className="max-h-80 overflow-y-auto">
+                          {notifications.map(notification => (
+                              <DropdownMenuItem 
+                                  key={notification.id} 
+                                  onClick={() => handleNotificationClick(notification)}
+                                  className={`flex items-start gap-3 whitespace-normal cursor-pointer ${!notification.isRead ? 'bg-primary/5' : ''}`}
+                              >
+                                  <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${!notification.isRead ? 'bg-primary' : 'bg-transparent'}`} />
+                                  <div className="flex-1 space-y-1">
+                                      <p className="font-semibold text-sm">{notification.title}</p>
+                                      <p className="text-xs text-muted-foreground">{notification.message}</p>
+                                      <p className="text-xs text-muted-foreground/80">{formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: arLocale })}</p>
+                                  </div>
+                              </DropdownMenuItem>
+                          ))}
+                          </div>
+                      ) : (
+                          <p className="p-4 text-center text-sm text-muted-foreground">{t_notifications.no_notifications}</p>
+                      )}
+                  </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={userProfile.photoURL || undefined} alt={userProfile.name} />
+                      <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{userProfile.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>{t.userMenu.profile}</span>
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t.auth.logout}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem onClick={() => router.push('/sessions')}>
+                      <BrainCircuit className="mr-2 h-4 w-4" />
+                      <span>{t.links.my_sessions}</span>
+                  </DropdownMenuItem>
+                  {userProfile.isAdmin && (
+                    <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      <span>{t.links.admin_dashboard}</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{t.auth.logout}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           ) : (
             <div className="hidden md:flex items-center space-x-2">
               <Link href="/login">
