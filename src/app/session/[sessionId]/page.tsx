@@ -79,7 +79,7 @@ export default function SessionPage() {
                 }
                 
                 // The App ID is the 'sub' claim in the JWT. We need to decode it to load the right script.
-                const decodedToken = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                const decodedToken = JSON.parse(atob(token.split('.')[1]));
                 const appId = decodedToken.sub;
                 const fullRoomName = `${appId}/${roomName}`;
 
