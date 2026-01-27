@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import ar from "@/locales/ar";
 
 const registerSchema = z.object({
@@ -65,10 +64,12 @@ export default function RegisterPage() {
         name: values.name,
         email: values.email,
         createdAt: new Date().toISOString(),
+        disabled: false,
+        isAdmin: false,
       };
 
       const userDocRef = doc(firestore, "userProfiles", user.uid);
-      setDocumentNonBlocking(userDocRef, userProfile, { merge: true });
+      await setDoc(userDocRef, userProfile, { merge: true });
 
       toast({
         title: "تم إنشاء الحساب!",
