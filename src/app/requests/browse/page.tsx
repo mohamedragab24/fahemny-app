@@ -51,17 +51,19 @@ export default function BrowseRequestsPage() {
     try {
       const requestRef = doc(firestore, 'sessionRequests', request.id);
       
-      // We only need to update the status and assign the tutor.
-      // The meeting link is now dynamically handled on the session page.
+      // Generate a unique, dynamic Jitsi link for each session
+      const meetingLink = `https://meet.jit.si/Fahemny-Session-${request.id}`;
+      
       updateDocumentNonBlocking(requestRef, {
         status: 'accepted',
         tutorId: user.uid,
+        meetingLink: meetingLink,
       });
 
       toast({
         variant: 'default',
         title: 'تم قبول الطلب!',
-        description: 'تم تحديث الطلب وسيتم توجيهك لصفحة جلساتك.',
+        description: 'تم إنشاء رابط الجلسة الفريد وتوجيهك لصفحة جلساتك.',
       });
 
       router.push('/sessions');

@@ -23,6 +23,7 @@ export type SessionRequest = {
   tutorGender: 'male' | 'female' | 'any';
   status: 'open' | 'accepted' | 'completed' | 'cancelled';
   createdAt: string;
+  meetingLink?: string;
   studentRating?: number;
   tutorRating?: number;
 };

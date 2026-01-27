@@ -112,6 +112,11 @@
           "description": "Timestamp indicating when the request was posted.",
           "format": "date-time"
         },
+        "meetingLink": {
+          "type": "string",
+          "description": "The unique link for the video session.",
+          "format": "uri"
+        },
         "studentRating": {
           "type": "number",
           "description": "Rating (1-5) given by the tutor to the student."

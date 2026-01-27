@@ -272,10 +272,10 @@ export default function MySessionsPage() {
                 {session.status === 'accepted' && (
                     <>
                         <Button asChild>
-                            <Link href={`/session/${session.id}`} target="_blank">
+                            <a href={session.meetingLink} target="_blank" rel="noopener noreferrer">
                                 <Video className="me-2 h-4 w-4" />
                                 دخول الجلسة
-                            </Link>
+                            </a>
                         </Button>
                         <div className="flex gap-2">
                             <Button 
