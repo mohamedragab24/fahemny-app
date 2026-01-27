@@ -22,7 +22,10 @@
         "role": {
           "type": "string",
           "description": "The role of the user.",
-          "enum": ["student", "tutor"]
+          "enum": [
+            "student",
+            "tutor"
+          ]
         },
         "rating": {
           "type": "number",
@@ -88,22 +91,39 @@
         "tutorGender": {
           "type": "string",
           "description": "The preferred gender of the tutor.",
-          "enum": ["male", "female", "any"]
+          "enum": [
+            "male",
+            "female",
+            "any"
+          ]
         },
         "status": {
           "type": "string",
           "description": "Current status of the request.",
-          "enum": ["open", "accepted", "completed", "cancelled"]
+          "enum": [
+            "open",
+            "accepted",
+            "completed",
+            "cancelled"
+          ]
         },
         "meetingLink": {
-            "type": "string",
-            "description": "The Zoom/Meet link for the session, provided by the tutor.",
-            "format": "uri"
+          "type": "string",
+          "description": "The Zoom/Meet link for the session, provided by the tutor.",
+          "format": "uri"
         },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the request was posted.",
           "format": "date-time"
+        },
+        "studentRating": {
+          "type": "number",
+          "description": "Rating (1-5) given by the tutor to the student."
+        },
+        "tutorRating": {
+          "type": "number",
+          "description": "Rating (1-5) given by the student to the tutor."
         }
       },
       "required": [
@@ -116,6 +136,51 @@
         "sessionDate",
         "sessionTime",
         "status",
+        "createdAt"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction in a user's wallet.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "deposit",
+            "withdrawal",
+            "session_payment",
+            "session_payout"
+          ]
+        },
+        "amount": {
+          "type": "number",
+          "description": "Transaction amount. Can be positive (credit) or negative (debit)."
+        },
+        "description": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Related session request ID, if applicable."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "type",
+        "amount",
         "createdAt"
       ]
     }
@@ -145,6 +210,16 @@
             "$ref": "#/backend/entities/SessionRequest"
           },
           "description": "Stores all session requests created by students."
+        }
+      },
+      {
+        "path": "/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores all wallet transactions for all users."
         }
       }
     ],

@@ -30,36 +30,25 @@ service cloud.firestore {
     // Collection Rules
     // ----------------------------------------------------------------------
 
-    /**
-     * @description Manages user profiles. Users can read any profile, but only edit their own.
-     */
     match /userProfiles/{userId} {
       allow get: if true;
       allow list: if isSignedIn();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
-      allow delete: if false; // Users should not be able to delete their profiles directly.
+      allow delete: if false;
     }
 
-    /**
-     * @description Manages session requests.
-     * Students can create requests.
-     * Tutors can view all open requests.
-     * Only the creating student or the assigned tutor can view an accepted request.
-     */
     match /sessionRequests/{requestId} {
       allow get: if isSignedIn() && 
                     (isTutor(request.auth.uid) || isOwner(resource.data.studentId) || isOwner(resource.data.tutorId));
       
       allow list: if isSignedIn();
       
-      // A student can create a request for themselves.
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
-      // An update can be performed by:
       allow update: if isSignedIn() && (
         // A tutor can accept an open request
-        (isTutor(request.auth.uid) && resource.data.tutorId == null && request.resource.data.status == 'accepted') ||
+        (isTutor(request.auth.uid) && resource.data.tutorId == null && request.resource.data.status == 'open' && request.resource.data.status == 'accepted') ||
         
         // The student who created the request can cancel it if it's open or accepted
         (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
@@ -68,11 +57,20 @@ service cloud.firestore {
         (isOwner(resource.data.tutorId) && resource.data.status == 'accepted' && request.resource.data.status == 'cancelled') ||
         
         // Either the student or the tutor can mark an accepted session as completed
-        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed')
+        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed') ||
+
+        // Either participant can add a rating to a completed session
+        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'completed' && (request.resource.data.keys().hasAny(['tutorRating', 'studentRating'])))
       );
       
-      // Only the student can delete their request, and only if it's still open.
       allow delete: if isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open';
+    }
+
+    match /transactions/{transactionId} {
+        // Users can read and create their own transactions, but cannot update or delete them.
+        allow get, list: if isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/transactions/$(transactionId)).data.userId;
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if false;
     }
   }
 }

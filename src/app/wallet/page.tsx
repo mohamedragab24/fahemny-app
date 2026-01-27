@@ -1,42 +1,68 @@
 'use client';
 
+import { useMemo } from 'react';
 import ar from '@/locales/ar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Download } from 'lucide-react';
+import { PlusCircle, Download, Wallet as WalletIcon, Loader2 } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import type { Transaction } from '@/lib/types';
+import { collection, query, where } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WalletPage() {
   const t = ar.header.links;
-  
-  // Dummy data for transactions
-  const transactions = [
-    { id: '1', type: 'إيداع', date: '25 يوليو 2024', amount: '+ 500.00 جنيه', status: 'مكتمل' },
-    { id: '2', type: 'جلسة', date: '24 يوليو 2024', amount: '- 75.00 جنيه', status: 'مكتمل' },
-    { id: '3', type: 'سحب أرباح', date: '22 يوليو 2024', amount: '- 300.00 جنيه', status: 'قيد المراجعة' },
-    { id: '4', type: 'جلسة', date: '20 يوليو 2024', amount: '- 50.00 جنيه', status: 'مكتمل' },
-  ];
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'مكتمل':
-        return 'outline';
-      case 'قيد المراجعة':
-        return 'secondary';
-      default:
-        return 'default';
+  const transactionsQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
+    [firestore, user]
+  );
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const currentBalance = useMemo(() => {
+    if (!transactions) return 0;
+    return transactions.reduce((acc, tx) => acc + tx.amount, 0);
+  }, [transactions]);
+  
+  const getTransactionTypeTranslation = (type: Transaction['type']) => {
+    switch(type) {
+      case 'deposit': return 'إيداع';
+      case 'session_payment': return 'دفع جلسة';
+      case 'session_payout': return 'أرباح جلسة';
+      case 'withdrawal': return 'سحب رصيد';
+      default: return type;
     }
   };
 
+  const isLoading = isUserLoading || isLoadingTransactions;
+
+  if (isLoading) {
+    return (
+        <div className="container py-8">
+            <Skeleton className="h-9 w-48 mb-6" />
+            <div className="grid gap-8 md:grid-cols-3">
+                <div className="md:col-span-2">
+                    <Skeleton className="h-96 w-full" />
+                </div>
+                <div>
+                    <Skeleton className="h-48 w-full" />
+                </div>
+            </div>
+        </div>
+    )
+  }
 
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold font-headline">{t.wallet}</h1>
-        <Button>
+        <Button disabled>
             <PlusCircle className="me-2 h-4 w-4" />
-            إضافة رصيد
+            إضافة رصيد (قريباً)
         </Button>
       </div>
       
@@ -46,37 +72,44 @@ export default function WalletPage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>سجل المعاملات</CardTitle>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" disabled>
                             <Download className="me-2 h-4 w-4" />
                             تصدير
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>النوع</TableHead>
-                                <TableHead>التاريخ</TableHead>
-                                <TableHead>الحالة</TableHead>
-                                <TableHead className="text-left">المبلغ</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {transactions.map((tx) => (
-                                <TableRow key={tx.id}>
-                                    <TableCell>{tx.type}</TableCell>
-                                    <TableCell>{tx.date}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={getStatusVariant(tx.status) as any}>{tx.status}</Badge>
-                                    </TableCell>
-                                    <TableCell className={`text-left font-medium ${tx.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                                        {tx.amount}
-                                    </TableCell>
+                    {transactions && transactions.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>الوصف</TableHead>
+                                    <TableHead>النوع</TableHead>
+                                    <TableHead>التاريخ</TableHead>
+                                    <TableHead className="text-left">المبلغ</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {transactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((tx) => (
+                                    <TableRow key={tx.id}>
+                                        <TableCell className="font-medium">{tx.description}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">{getTransactionTypeTranslation(tx.type)}</Badge>
+                                        </TableCell>
+                                        <TableCell>{new Date(tx.createdAt).toLocaleDateString('ar-EG')}</TableCell>
+                                        <TableCell className={`text-left font-medium ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {tx.amount.toFixed(2)} جنيه
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <WalletIcon className="mx-auto h-12 w-12" />
+                            <p className="mt-4">لا توجد معاملات لعرضها.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -87,11 +120,11 @@ export default function WalletPage() {
                     <CardDescription>هذا هو المبلغ المتاح في حسابك.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold text-primary">375.00</p>
+                    <p className="text-4xl font-bold text-primary">{currentBalance.toFixed(2)}</p>
                     <p className="text-muted-foreground">جنيه مصري</p>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full">سحب الأرباح</Button>
+                    <Button className="w-full" disabled>سحب الأرباح (قريباً)</Button>
                 </CardFooter>
             </Card>
         </div>

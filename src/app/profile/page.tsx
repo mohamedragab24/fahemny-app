@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Star } from 'lucide-react';
 
 const profileFormSchema = z.object({
   name: z.string().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل'),
@@ -102,7 +101,7 @@ export default function ProfilePage() {
                     )}
                   />
                   <div className="space-y-2">
-                    <Label>البريد الإلكتروني</Label>
+                    <FormLabel>البريد الإلكتروني</FormLabel>
                     <Input value={userProfile.email} disabled />
                   </div>
                 </CardContent>
@@ -132,10 +131,17 @@ export default function ProfilePage() {
             </Card>
              <Card>
                 <CardHeader>
-                    <CardTitle>دورك الحالي</CardTitle>
+                    <CardTitle>دورك وتقييمك</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
                     <p className="text-lg font-semibold capitalize">{userProfile.role === 'student' ? 'مستفهم' : 'مفهّم'}</p>
+                    {userProfile.rating && (
+                        <div className="flex items-center gap-1 text-yellow-500">
+                            <Star className="w-5 h-5 fill-current" />
+                            <span className="font-bold text-lg">{userProfile.rating.toFixed(1)}</span>
+                            <span className="text-sm text-muted-foreground">/ 5.0</span>
+                        </div>
+                    )}
                      <Button variant="outline" disabled>تغيير الدور (قريباً)</Button>
                 </CardContent>
             </Card>

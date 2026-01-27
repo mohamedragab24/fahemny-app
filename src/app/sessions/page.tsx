@@ -3,19 +3,20 @@
 import { useMemo, useState } from 'react';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import type { SessionRequest, UserProfile } from '@/lib/types';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import type { SessionRequest, UserProfile, Transaction } from '@/lib/types';
+import { collection, query, where, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Video, CalendarX, CheckCircle, Clock, X, Loader2 } from 'lucide-react';
+import { Video, CalendarX, CheckCircle, Clock, X, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
-// Helper component to display the other user's name
+// Helper component to display the other user's name and rating
 function OtherUserDetails({ userId, label }: { userId: string, label: string }) {
   const firestore = useFirestore();
   const userProfileRef = useMemoFirebase(
@@ -27,8 +28,123 @@ function OtherUserDetails({ userId, label }: { userId: string, label: string }) 
   if (isLoading) return <Skeleton className="h-5 w-32 mt-1" />;
   if (!userProfile) return null;
 
-  return <p className="text-sm text-muted-foreground">{label}: {userProfile.name}</p>;
+  return (
+    <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <p>{label}: {userProfile.name}</p>
+        {userProfile.rating && (
+            <div className="flex items-center gap-1 text-yellow-500">
+                <Star className="w-4 h-4 fill-current" />
+                <span className="font-semibold">{userProfile.rating.toFixed(1)}</span>
+            </div>
+        )}
+    </div>
+  );
 }
+
+// Rating Dialog Component
+function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { session: SessionRequest; userRole: 'student' | 'tutor'; open: boolean; onOpenChange: (open: boolean) => void; onSubmitted: () => void; }) {
+  const [rating, setRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleRatingSubmit = async () => {
+    if (rating === 0) {
+      toast({ variant: 'destructive', title: 'الرجاء اختيار تقييم' });
+      return;
+    }
+    setIsSubmitting(true);
+    
+    const ratedField = userRole === 'student' ? 'tutorRating' : 'studentRating';
+    const ratedUserId = userRole === 'student' ? session.tutorId : session.studentId;
+
+    try {
+      const sessionRef = doc(useFirestore(), 'sessionRequests', session.id);
+      await updateDoc(sessionRef, { [ratedField]: rating });
+
+      // After submitting rating, update the average rating for the other user.
+      if (ratedUserId) {
+        await updateUserAverageRating(ratedUserId);
+      }
+      
+      toast({ title: 'شكراً لتقييمك!', description: 'تم حفظ تقييمك بنجاح.' });
+      onSubmitted();
+    } catch (error: any) {
+      console.error("Failed to submit rating:", error);
+      toast({ variant: 'destructive', title: 'خطأ', description: error.message || 'لم نتمكن من حفظ التقييم.' });
+    } finally {
+      setIsSubmitting(false);
+      onOpenChange(false);
+      setRating(0);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>تقييم الجلسة</DialogTitle>
+          <DialogDescription>
+            تقييمك يساعدنا على تحسين جودة المنصة. الرجاء تقييم تجربتك.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-center items-center gap-2 py-4">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={`w-8 h-8 cursor-pointer transition-colors ${rating >= star ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+              onClick={() => setRating(star)}
+            />
+          ))}
+        </div>
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)} variant="ghost">إلغاء</Button>
+          <Button onClick={handleRatingSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            إرسال التقييم
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+// Function to update a user's average rating
+async function updateUserAverageRating(userId: string) {
+  const firestore = useFirestore();
+  
+  // Find all completed sessions where the user was either a student or a tutor
+  const studentSessionsQuery = query(collection(firestore, 'sessionRequests'), where('studentId', '==', userId), where('status', '==', 'completed'));
+  const tutorSessionsQuery = query(collection(firestore, 'sessionRequests'), where('tutorId', '==', userId), where('status', '==', 'completed'));
+
+  const [studentSessionsSnapshot, tutorSessionsSnapshot] = await Promise.all([
+    getDocs(studentSessionsQuery),
+    getDocs(tutorSessionsQuery)
+  ]);
+  
+  const allRatings: number[] = [];
+
+  studentSessionsSnapshot.forEach(doc => {
+    const data = doc.data() as SessionRequest;
+    if (data.studentRating) {
+      allRatings.push(data.studentRating);
+    }
+  });
+
+  tutorSessionsSnapshot.forEach(doc => {
+    const data = doc.data() as SessionRequest;
+    if (data.tutorRating) {
+      allRatings.push(data.tutorRating);
+    }
+  });
+
+  if (allRatings.length > 0) {
+    const averageRating = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+    const userProfileRef = doc(firestore, 'userProfiles', userId);
+    await updateDoc(userProfileRef, { rating: averageRating });
+  }
+}
+
 
 
 export default function MySessionsPage() {
@@ -37,6 +153,7 @@ export default function MySessionsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [ratingSession, setRatingSession] = useState<SessionRequest | null>(null);
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -58,16 +175,40 @@ export default function MySessionsPage() {
 
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
 
-  const handleUpdateStatus = (sessionId: string, newStatus: 'completed' | 'cancelled') => {
-    setUpdatingId(sessionId);
-    const sessionRef = doc(firestore, 'sessionRequests', sessionId);
+  const handleUpdateStatus = (session: SessionRequest, newStatus: 'completed' | 'cancelled') => {
+    setUpdatingId(session.id);
+    const sessionRef = doc(firestore, 'sessionRequests', session.id);
     updateDocumentNonBlocking(sessionRef, { status: newStatus });
+    
+    // If completed, create transactions
+    if (newStatus === 'completed' && session.tutorId) {
+        const transactionsCol = collection(firestore, 'transactions');
+        
+        // Student payment
+        addDocumentNonBlocking(transactionsCol, {
+            userId: session.studentId,
+            type: 'session_payment',
+            amount: -session.price,
+            description: `دفع مقابل جلسة: ${session.title}`,
+            sessionId: session.id,
+            createdAt: new Date().toISOString()
+        });
+
+        // Tutor payout
+        addDocumentNonBlocking(transactionsCol, {
+            userId: session.tutorId,
+            type: 'session_payout',
+            amount: session.price * 0.8, // 80% commission
+            description: `أرباح جلسة: ${session.title}`,
+            sessionId: session.id,
+            createdAt: new Date().toISOString()
+        });
+    }
+
     toast({
         title: `تم تحديث حالة الجلسة`,
         description: `تم ${newStatus === 'completed' ? 'إنهاء' : 'إلغاء'} الجلسة بنجاح.`
     });
-    // The UI will update automatically due to the real-time listener.
-    // We can set updatingId to null after a short delay to allow UI to catch up.
     setTimeout(() => setUpdatingId(null), 1000);
   };
 
@@ -104,7 +245,11 @@ export default function MySessionsPage() {
 
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
-        {sessionList.map((session) => (
+        {sessionList.map((session) => {
+            const hasStudentRated = session.tutorRating !== undefined;
+            const hasTutorRated = session.studentRating !== undefined;
+
+          return (
           <Card key={session.id} className="flex flex-col">
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -137,7 +282,7 @@ export default function MySessionsPage() {
                             <Button 
                                 variant="outline"
                                 className="w-full"
-                                onClick={() => handleUpdateStatus(session.id, 'completed')}
+                                onClick={() => handleUpdateStatus(session, 'completed')}
                                 disabled={updatingId === session.id}
                             >
                                 {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <CheckCircle className="me-2 h-4 w-4" />}
@@ -146,7 +291,7 @@ export default function MySessionsPage() {
                             <Button 
                                 variant="destructive"
                                 size="sm"
-                                onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                                onClick={() => handleUpdateStatus(session, 'cancelled')}
                                 disabled={updatingId === session.id}
                             >
                                 <X className="h-4 w-4" />
@@ -159,16 +304,28 @@ export default function MySessionsPage() {
                      <Button 
                         variant="destructive"
                         className="w-full"
-                        onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                        onClick={() => handleUpdateStatus(session, 'cancelled')}
                         disabled={updatingId === session.id}
                     >
                         {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <X className="me-2 h-4 w-4" />}
                         إلغاء الطلب
                     </Button>
                 )}
+                {session.status === 'completed' && userProfile?.role === 'student' && !hasStudentRated && (
+                     <Button variant="secondary" onClick={() => setRatingSession(session)}>
+                        <Star className="me-2 h-4 w-4" />
+                        قيّم المفهّم
+                    </Button>
+                )}
+                 {session.status === 'completed' && userProfile?.role === 'tutor' && !hasTutorRated && (
+                     <Button variant="secondary" onClick={() => setRatingSession(session)}>
+                        <Star className="me-2 h-4 w-4" />
+                        قيّم المستفهم
+                    </Button>
+                )}
             </CardFooter>
           </Card>
-        ))}
+        )})}
       </div>
     );
   };
@@ -204,6 +361,18 @@ export default function MySessionsPage() {
   return (
     <div className="container py-8">
       <h1 className="text-3xl font-bold font-headline mb-6">{t.my_sessions}</h1>
+      
+      {ratingSession && userProfile?.role && (
+        <RatingDialog 
+          session={ratingSession}
+          userRole={userProfile.role}
+          open={!!ratingSession}
+          onOpenChange={(open) => !open && setRatingSession(null)}
+          onSubmitted={() => {
+            // Optional: could trigger a re-fetch or rely on the listener
+          }}
+        />
+      )}
 
       <Tabs defaultValue="upcoming" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
