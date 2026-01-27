@@ -12,15 +12,17 @@ import {
   Wallet,
   PlusCircle,
   LayoutGrid,
+  Bell,
+  BellRing,
+  Check,
 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetClose,
-  SheetTitle,
 } from "@/components/ui/sheet";
-import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
@@ -29,13 +31,117 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { UserProfile } from "@/lib/types";
-import { doc } from "firebase/firestore";
+import type { UserProfile, Notification } from "@/lib/types";
+import { doc, collection, query, where, limit, updateDoc } from "firebase/firestore";
 import ar from "@/locales/ar";
+import { cn } from "@/lib/utils";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useMemo } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ar as arLocale } from "date-fns/locale";
 
 type Translations = typeof ar.header;
+
+function NotificationsDropdown() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const router = useRouter();
+
+    const notificationsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(
+            collection(firestore, 'notifications'),
+            where('userId', '==', user.uid),
+            limit(10)
+        );
+    }, [firestore, user]);
+
+    const { data: notifications } = useCollection<Notification>(notificationsQuery);
+
+    const sortedNotifications = useMemo(() => {
+        return notifications?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
+    }, [notifications]);
+
+    const unreadCount = useMemo(() => {
+        return notifications?.filter(n => !n.isRead).length || 0;
+    }, [notifications]);
+
+    const handleNotificationClick = (notification: Notification) => {
+        if (!notification.isRead) {
+            const notifRef = doc(firestore, 'notifications', notification.id);
+            // We use updateDoc directly here instead of the non-blocking version
+            // to ensure the UI can update instantly on navigation.
+            updateDoc(notifRef, { isRead: true });
+        }
+        if (notification.link) {
+            router.push(notification.link);
+        }
+    };
+
+    const markAllAsRead = () => {
+        if (!notifications) return;
+        notifications.forEach(notification => {
+            if (!notification.isRead) {
+                const notifRef = doc(firestore, 'notifications', notification.id);
+                updateDocumentNonBlocking(notifRef, { isRead: true });
+            }
+        });
+    };
+    
+    if (!sortedNotifications) return null;
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+                    {unreadCount > 0 ? <BellRing className="h-5 w-5 text-primary" /> : <Bell className="h-5 w-5" />}
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-white">
+                            {unreadCount}
+                        </span>
+                    )}
+                    <span className="sr-only">{ar.notifications.title}</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80" align="end">
+                <DropdownMenuLabel className="flex justify-between items-center">
+                    <span>{ar.notifications.title}</span>
+                    {unreadCount > 0 && (
+                         <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto px-2 py-1 text-xs">
+                            <Check className="me-1 h-3 w-3" />
+                            وضع علامة "مقروء" على الكل
+                        </Button>
+                    )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                    {sortedNotifications.length > 0 ? (
+                        sortedNotifications.map(notification => (
+                            <DropdownMenuItem 
+                                key={notification.id} 
+                                className={cn("flex flex-col items-start gap-1 whitespace-normal cursor-pointer", !notification.isRead && "bg-primary/5")}
+                                onClick={() => handleNotificationClick(notification)}
+                            >
+                                <p className="font-semibold text-sm">{notification.title}</p>
+                                <p className="text-xs text-muted-foreground">{notification.message}</p>
+                                <p className="text-xs text-muted-foreground/80 self-end">
+                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: arLocale })}
+                                </p>
+                            </DropdownMenuItem>
+                        ))
+                    ) : (
+                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                            {ar.notifications.no_notifications}
+                        </div>
+                    )}
+                </DropdownMenuGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 export default function Header({ translations: t }: { translations: Translations}) {
   const { user, isUserLoading } = useUser();
@@ -55,16 +161,15 @@ export default function Header({ translations: t }: { translations: Translations
   };
 
   const navLinks = [
-    { href: "/requests/browse", label: t.links.browse_requests },
-    { href: "/requests/create", label: t.links.create_request },
+    { href: "/requests/browse", label: t.links.browse_requests, role: 'tutor' },
+    { href: "/requests/create", label: t.links.create_request, role: 'student' },
     { href: "/sessions", label: t.links.my_sessions },
     { href: "/wallet", label: t.links.wallet },
-    { href: "/support", label: t.links.support },
   ];
   
   const mobileNavLinks = [
-      { href: "/requests/browse", label: t.links.browse_requests, icon: <LayoutGrid className="h-5 w-5" /> },
-      { href: "/requests/create", label: t.links.create_request, icon: <PlusCircle className="h-5 w-5" /> },
+      { href: "/requests/browse", label: t.links.browse_requests, icon: <LayoutGrid className="h-5 w-5" />, role: 'tutor' },
+      { href: "/requests/create", label: t.links.create_request, icon: <PlusCircle className="h-5 w-5" />, role: 'student' },
       { href: "/sessions", label: t.links.my_sessions, icon: <BrainCircuit className="h-5 w-5" /> },
       { href: "/wallet", label: t.links.wallet, icon: <Wallet className="h-5 w-5" /> },
       { href: "/support", label: t.links.support, icon: <LifeBuoy className="h-5 w-5" /> },
@@ -73,6 +178,9 @@ export default function Header({ translations: t }: { translations: Translations
   const getInitials = (name?: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || user?.email?.[0].toUpperCase();
   }
+
+  const userNavLinks = navLinks.filter(link => !link.role || link.role === userProfile?.role);
+  const userMobileNavLinks = mobileNavLinks.filter(link => !link.role || link.role === userProfile?.role);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -83,24 +191,27 @@ export default function Header({ translations: t }: { translations: Translations
             <span>{t.title}</span>
           </Link>
         </div>
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        
+        {user && userProfile && (
+            <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            {userNavLinks.map((link) => (
+                <Link
+                key={link.href}
+                href={link.href}
+                className="transition-colors hover:text-foreground/80 text-foreground/60"
+                >
+                {link.label}
+                </Link>
+            ))}
+            </nav>
+        )}
+
         <div className="flex flex-1 items-center justify-end space-x-2">
           {isUserLoading ? (
-            <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
-            </div>
+            <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
           ) : user && userProfile ? (
             <>
+              <NotificationsDropdown />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -120,15 +231,20 @@ export default function Header({ translations: t }: { translations: Translations
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/profile')}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>{t.userMenu.profile}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/sessions')}>
-                      <BrainCircuit className="mr-2 h-4 w-4" />
-                      <span>{t.links.my_sessions}</span>
-                  </DropdownMenuItem>
-                  
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => router.push('/profile')}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>{t.userMenu.profile}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/sessions')}>
+                        <BrainCircuit className="mr-2 h-4 w-4" />
+                        <span>{t.links.my_sessions}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/wallet')}>
+                        <Wallet className="mr-2 h-4 w-4" />
+                        <span>{t.links.wallet}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -155,7 +271,6 @@ export default function Header({ translations: t }: { translations: Translations
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-               <SheetTitle className="sr-only">{t.mobile.title}</SheetTitle>
               <div className="flex flex-col h-full">
                 <div className="border-b pb-4">
                   <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
@@ -165,7 +280,7 @@ export default function Header({ translations: t }: { translations: Translations
                 </div>
                 <nav className="flex-grow mt-6">
                   <ul className="space-y-4">
-                    {mobileNavLinks.map((link) => (
+                    {user && userProfile ? userMobileNavLinks.map((link) => (
                       <li key={link.href}>
                         <SheetClose asChild>
                          <Link href={link.href} className="flex items-center gap-3 text-lg font-medium">
@@ -174,7 +289,16 @@ export default function Header({ translations: t }: { translations: Translations
                          </Link>
                         </SheetClose>
                       </li>
-                    ))}
+                    )) : (
+                        <li>
+                            <SheetClose asChild>
+                                <Link href="/about" className="flex items-center gap-3 text-lg font-medium">
+                                    <LifeBuoy className="h-5 w-5" />
+                                    <span>{ar.footer.about}</span>
+                                </Link>
+                            </SheetClose>
+                        </li>
+                    )}
                   </ul>
                 </nav>
                 <div className="mt-auto border-t pt-4">
