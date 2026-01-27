@@ -20,6 +20,7 @@ export default {
     mobile: {
       toggle: 'فتح القائمة',
       title: 'القائمة الرئيسية',
+      description: 'القائمة الرئيسية للتنقل في التطبيق'
     }
   },
   footer: {

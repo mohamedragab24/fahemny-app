@@ -22,6 +22,9 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -285,6 +288,10 @@ export default function Header({ translations: t }: { translations: Translations
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
+                <SheetHeader>
+                    <SheetTitle className="sr-only">{t.mobile.title}</SheetTitle>
+                    <SheetDescription className="sr-only">{t.mobile.description}</SheetDescription>
+                </SheetHeader>
               <div className="flex flex-col h-full">
                 <div className="border-b pb-4">
                   <Link href="/" className="flex items-center gap-2 font-bold font-headline text-lg">
