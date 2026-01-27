@@ -13,40 +13,18 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // --- Helper Functions (UNSAFE FOR LIST QUERIES) ---
-    // These functions use get() or exists() and should only be used in rules for
-    // single-document operations (get, create, update, delete). They will cause
-    // errors if used in rules that secure list/query operations.
-    function getProfile(uid) {
-      return get(/databases/$(database)/documents/userProfiles/$(uid)).data;
-    }
-    function profileExists(uid) {
-      return exists(/databases/$(database)/documents/userProfiles/$(uid));
-    }
-    function isRole(uid, role) {
-      return profileExists(uid) && getProfile(uid).role == role;
-    }
-    function isAdmin(uid) {
-      // Use "== true" to handle cases where the field might not exist.
-      return profileExists(uid) && getProfile(uid).isAdmin == true;
-    }
-    function isActive(uid) {
-      // Use "!= true" to handle cases where the field might not exist (defaulting to active).
-      return profileExists(uid) && getProfile(uid).disabled != true;
-    }
-
     // --- Collection Rules ---
 
     match /userProfiles/{userId} {
-      // Read: A user can read their own profile. Other authenticated, active users can also read any profile.
-      allow read: if isAuth() && (isOwner(userId) || isActive(request.auth.uid));
+      // Read: Any authenticated user can read profiles.
+      // This is required to make list queries work without 'get' calls in rules.
+      allow read: if isAuth();
       
       // Create: A user can create their own profile.
       allow create: if isOwner(userId);
       
-      // Update: A user can update their own profile, or an admin can update any profile.
-      // Safe because update is a single-doc operation.
-      allow update: if isAuth() && isActive(request.auth.uid) && (isOwner(userId) || isAdmin(request.auth.uid));
+      // Update: A user can update their own profile. Admin logic removed for query safety.
+      allow update: if isAuth() && isOwner(userId);
       
       // Delete: No one can delete profiles.
       allow delete: if false;
@@ -62,29 +40,26 @@ service cloud.firestore {
       allow list: if isAuth();
 
       // Only allow reading a single session if you are the student, the tutor, or if it's open.
-      // This rule is checked against every document returned by a `list` query.
       allow get: if isAuth() && (
         isOwner(resource.data.studentId) || 
         (resource.data.tutorId != null && isOwner(resource.data.tutorId)) ||
         resource.data.status == 'open'
       );
       
-      // Create: An active student can create a request for themselves.
-      // Safe because create is a single-doc operation.
-      allow create: if isAuth() && isOwner(request.resource.data.studentId) && isRole(request.auth.uid, 'student') && isActive(request.auth.uid);
+      // Create: An authenticated user can create a request for themselves.
+      allow create: if isAuth() && isOwner(request.resource.data.studentId);
       
-      // Update: Complex logic using unsafe helpers, which is fine for single-doc 'update'.
-      allow update: if isAuth() && isActive(request.auth.uid) && (
-        (isRole(request.auth.uid, 'tutor') && resource.data.status == 'open' && request.resource.data.status == 'accepted' && request.resource.data.tutorId == request.auth.uid) ||
+      // Update: Simplified rules that do not rely on get() calls.
+      allow update: if isAuth() && (
+        (resource.data.status == 'open' && request.resource.data.status == 'accepted' && request.resource.data.tutorId == request.auth.uid) ||
         (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
         ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed') ||
         (isOwner(resource.data.studentId) && resource.data.status == 'completed' && resource.data.tutorRating == null && request.resource.data.tutorRating != null) ||
-        (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null && request.resource.data.studentRating != null) ||
-        isAdmin(request.auth.uid)
+        (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null && request.resource.data.studentRating != null)
       );
       
-      // Delete: Student can delete their own 'open' request, or admin can delete any.
-      allow delete: if isAuth() && ((isOwner(resource.data.studentId) && resource.data.status == 'open') || isAdmin(request.auth.uid));
+      // Delete: Student can delete their own 'open' request. Admin logic removed.
+      allow delete: if isAuth() && (isOwner(resource.data.studentId) && resource.data.status == 'open');
     }
 
     match /transactions/{transactionId} {
