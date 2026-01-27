@@ -240,6 +240,7 @@ export default {
         transactions: 'المعاملات المالية',
         sessions: 'إدارة الجلسات',
         withdrawals: 'طلبات السحب',
+        discounts: 'أكواد الخصم',
     },
     access_denied: {
         title: 'الوصول مرفوض',
@@ -301,6 +302,41 @@ export default {
             status: 'الحالة',
             actions: 'الإجراءات',
         },
+    },
+    discounts: {
+        title: 'إدارة أكواد الخصم',
+        description: 'إنشاء وإدارة أكواد الخصم للمستخدمين.',
+        add_button: 'إضافة كود جديد',
+        no_codes: 'لا توجد أكواد خصم لعرضها.',
+        table: {
+            code: 'الكود',
+            type: 'النوع',
+            value: 'القيمة',
+            usage: 'الاستخدام',
+            status: 'الحالة',
+            actions: 'الإجراءات',
+        },
+        form: {
+            add_title: 'إضافة كود خصم جديد',
+            edit_title: 'تعديل كود الخصم',
+            code_label: 'الكود',
+            code_placeholder: 'EID2024',
+            code_exists: 'هذا الكود مستخدم بالفعل.',
+            type_label: 'نوع الخصم',
+            type_fixed: 'مبلغ ثابت',
+            type_percentage: 'نسبة مئوية',
+            value_label: 'قيمة الخصم',
+            value_placeholder_fixed: '50',
+            value_placeholder_percentage: '10',
+            usageLimit_label: 'الحد الأقصى للاستخدام',
+            usageLimit_placeholder: '100',
+            submit: 'حفظ الكود',
+            submitting: 'جارٍ الحفظ...',
+            cancel: 'إلغاء',
+        },
+        active: 'نشط',
+        inactive: 'غير نشط',
+        confirm_delete: 'هل أنت متأكد من حذف هذا الكود؟ لا يمكن التراجع عن هذا الإجراء.',
     }
   },
   notifications: {
@@ -324,5 +360,14 @@ export default {
   project_details: {
       by_employer: 'بواسطة',
       view_project: 'عرض التفاصيل',
+  },
+  review_request: {
+    discount_code_label: 'هل لديك كود خصم؟',
+    apply_button: 'تطبيق',
+    applying_button: 'جارٍ التطبيق...',
+    code_applied_toast: 'تم تطبيق الخصم بنجاح!',
+    invalid_code_toast: 'كود الخصم غير صالح أو انتهى استخدامه.',
+    discount_label: 'الخصم:',
+    final_price_label: 'السعر النهائي:',
   }
 } as const;

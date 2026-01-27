@@ -37,7 +37,7 @@ service cloud.firestore {
     
     // Transactions
     match /transactions/{transactionId} {
-      allow create: if isAuth() && isOwner(request.resource.data.userId);
+      allow create: if isAuth() && (isOwner(request.resource.data.userId) || isAdmin()); // Admin can create tx during withdrawal approval
       allow list: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update, delete: if false;
@@ -45,8 +45,8 @@ service cloud.firestore {
 
     // Notifications
     match /notifications/{notificationId} {
-       allow create: if isAuth();
-       allow get, list, update, delete: if isAuth() && isOwner(resource.data.userId);
+       allow create: if isAuth(); // Any auth user can create (for user-to-admin or system-to-user)
+       allow get, list, update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
     }
 
     // Withdrawal Requests
@@ -55,6 +55,12 @@ service cloud.firestore {
       allow get, list: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update: if isAuth() && isAdmin();
       allow delete: if false;
+    }
+
+    // Discount Codes
+    match /discountCodes/{discountId} {
+      allow create, update, delete: if isAuth() && isAdmin();
+      allow get, list: if isAuth(); // Allow all auth users to read/validate codes
     }
   }
 }

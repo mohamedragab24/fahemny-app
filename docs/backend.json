@@ -84,7 +84,15 @@
         },
         "price": {
           "type": "number",
-          "description": "The price offered by the student for the session."
+          "description": "The final price for the session after any discounts."
+        },
+        "originalPrice": {
+            "type": "number",
+            "description": "The original price before any discounts were applied."
+        },
+        "discountCode": {
+            "type": "string",
+            "description": "The discount code applied to this session, if any."
         },
         "sessionDate": {
           "type": "string",
@@ -256,6 +264,23 @@
         "adminNotes": { "type": "string", "description": "Notes from admin (e.g. reason for rejection)" }
       },
       "required": ["id", "userId", "userName", "amount", "status", "createdAt", "details"]
+    },
+    "DiscountCode": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "DiscountCode",
+        "type": "object",
+        "description": "Represents a discount code that can be applied to sessions.",
+        "properties": {
+            "id": { "type": "string" },
+            "code": { "type": "string", "description": "The unique code string." },
+            "type": { "type": "string", "enum": ["percentage", "fixed"] },
+            "value": { "type": "number", "description": "The value of the discount (percentage or fixed amount)." },
+            "usageLimit": { "type": "number", "description": "Total number of times this code can be used." },
+            "usageCount": { "type": "number", "description": "How many times this code has been used." },
+            "isActive": { "type": "boolean", "description": "Whether the code is currently active." },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "code", "type", "value", "usageLimit", "usageCount", "isActive", "createdAt"]
     }
   },
   "auth": {
@@ -303,6 +328,14 @@
             "entityName": "WithdrawalRequest",
             "schema": { "$ref": "#/backend/entities/WithdrawalRequest" },
             "description": "Stores tutor withdrawal requests."
+        }
+      },
+      {
+        "path": "/discountCodes/{discountId}",
+        "definition": {
+            "entityName": "DiscountCode",
+            "schema": { "$ref": "#/backend/entities/DiscountCode" },
+            "description": "Stores all discount codes created by admins."
         }
       }
     ],

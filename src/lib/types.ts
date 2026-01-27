@@ -20,6 +20,8 @@ export type SessionRequest = {
   field: string;
   description: string;
   price: number;
+  originalPrice?: number;
+  discountCode?: string;
   sessionDate: string;
   sessionTime: string;
   tutorGender: 'male' | 'female' | 'any';
@@ -61,4 +63,15 @@ export type WithdrawalRequest = {
     createdAt: string;
     details: string; // For withdrawal details like Instapay/Vodafone Cash
     adminNotes?: string; // For admin when rejecting
+};
+
+export type DiscountCode = {
+    id: string;
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    usageLimit: number;
+    usageCount: number;
+    isActive: boolean;
+    createdAt: string;
 };
