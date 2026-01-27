@@ -14,39 +14,42 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /userProfiles/{userId} {
-      // Read: Any authenticated user can get a specific profile. List is not allowed.
+      // Allow any authenticated user to GET a profile.
+      // LIST is disabled to prevent query contamination issues that were breaking other rules.
+      // This means admin pages that list all users will not work.
       allow get: if isAuth();
+      allow list: if false; // This is a critical fix to prevent query failures elsewhere
       
-      // Create: A user can create their own profile.
+      // A user can create their own profile.
       allow create: if isOwner(userId);
       
-      // Update: A user can update their own profile. Admin logic removed for query safety.
-      allow update: if isOwner(userId);
+      // A user can update their own profile. Admin can also update profiles.
+      // get() is safe here because it's a write operation.
+      allow update: if isOwner(userId) || (
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true
+      );
       
-      // Delete: No one can delete profiles.
+      // No one can delete profiles.
       allow delete: if false;
     }
 
     match /sessionRequests/{requestId} {
-      // This is the pattern for securing queries.
-      // 1. A loose `list` rule allows the query to be attempted.
-      // 2. A strict `get` rule is evaluated for every document the query *could* return.
-      // The client-side code *must* include `where` clauses that align with the `get` rule.
-      
-      // Allow any authenticated user to try and list sessions.
+      // For queries: allow any authenticated user to attempt a query.
       allow list: if isAuth();
 
-      // Only allow reading a single session if you are the student, the tutor, or if it's open.
+      // For individual reads (and validating query results):
+      // Allow if you are the student, the accepted tutor, or if the request is still open for tutors to see.
       allow get: if isAuth() && (
+        resource.data.status == 'open' ||
         isOwner(resource.data.studentId) || 
-        (resource.data.tutorId != null && isOwner(resource.data.tutorId)) ||
-        resource.data.status == 'open'
+        (resource.data.tutorId != null && isOwner(resource.data.tutorId))
       );
       
       // Create: An authenticated user can create a request for themselves.
       allow create: if isAuth() && isOwner(request.resource.data.studentId);
       
-      // Update: Simplified rules that do not rely on get() calls.
+      // Update: Complex state machine for session updates. Safe because it's a write op.
       allow update: if isAuth() && (
         (resource.data.status == 'open' && request.resource.data.status == 'accepted' && request.resource.data.tutorId == request.auth.uid) ||
         (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
@@ -55,30 +58,30 @@ service cloud.firestore {
         (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null && request.resource.data.studentRating != null)
       );
       
-      // Delete: Student can delete their own 'open' request. Admin logic removed.
+      // Delete: Student can delete their own 'open' request.
       allow delete: if isAuth() && isOwner(resource.data.studentId) && resource.data.status == 'open';
     }
 
     match /transactions/{transactionId} {
-      // WARNING: This rule is permissive for reads. Security relies on the client-side query.
-      allow read: if request.auth != null;
+      allow list: if isAuth();
+      allow get: if isAuth() && isOwner(resource.data.userId);
 
       // A user can only create their own transaction.
-      allow create: if request.auth.uid == request.resource.data.userId;
+      allow create: if isAuth() && isOwner(request.resource.data.userId);
 
       // No updates or deletes allowed.
       allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      // WARNING: This rule is permissive for reads. Security relies on the client-side query.
-      allow read: if request.auth != null;
+      allow list: if isAuth();
+      allow get: if isAuth() && isOwner(resource.data.userId);
       
-      // Anyone authenticated can create a notification (e.g. system for a user).
-      allow create: if request.auth != null; 
+      // System can create a notification for a user, so we check owner on the resource being created.
+      allow create: if isAuth() && isOwner(request.resource.data.userId); 
       
       // Users can update their own notifications (e.g. to mark as read).
-      allow update: if request.auth.uid == resource.data.userId;
+      allow update: if isAuth() && isOwner(resource.data.userId);
       
       // Deleting notifications is not allowed.
       allow delete: if false;

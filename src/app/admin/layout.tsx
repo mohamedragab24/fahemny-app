@@ -25,9 +25,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const navItems = [
-    { href: '/admin/dashboard', label: t.nav.dashboard, icon: <LayoutDashboard className="h-4 w-4" /> },
-    { href: '/admin/users', label: t.nav.users, icon: <Users className="h-4 w-4" /> },
+  const navItems: { href: string, label: string, icon: ReactNode }[] = [
+    // Admin pages that list all users/transactions have been temporarily disabled
+    // to fix critical permission errors affecting all users.
   ];
 
   if (isUserLoading || isProfileLoading) {

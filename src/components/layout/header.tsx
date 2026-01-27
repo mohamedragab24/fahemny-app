@@ -196,12 +196,7 @@ export default function Header({ translations: t }: { translations: Translations
                       <BrainCircuit className="mr-2 h-4 w-4" />
                       <span>{t.links.my_sessions}</span>
                   </DropdownMenuItem>
-                  {userProfile.isAdmin && (
-                    <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      <span>{t.links.admin_dashboard}</span>
-                    </DropdownMenuItem>
-                  )}
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
