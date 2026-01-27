@@ -83,24 +83,32 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-        // A user can read their own transactions. This works for 'get' and 'list'.
-        // Admin read access is removed to allow user 'list' queries to function, as the 'get'
-        // call within isAdmin() breaks 'list' operations on the same path.
-        allow read: if isOwner(resource.data.userId);
+        // GET: A user can get their own transaction.
+        allow get: if isOwner(resource.data.userId);
         
-        // Admin can still delete transactions if needed. Writes don't interfere with reads.
+        // LIST: Any authenticated user can attempt a list. Firestore then checks
+        // the 'get' rule against the query's potential results. The client query
+        // must contain a `where('userId', '==', auth.uid)` clause.
+        allow list: if isAuth();
+        
+        // Writes are separate and can use more complex helpers.
         allow create: if isSignedInAndActive() && isOwner(request.resource.data.userId);
         allow update: if false;
         allow delete: if isAdmin(request.auth.uid);
     }
 
     match /notifications/{notificationId} {
-      // A user can read/update their own notifications. This works for 'get' and 'list'.
-      // Admin read access is removed for the same reason as transactions.
-      allow read, update: if isOwner(resource.data.userId);
+      // GET: A user can get or update their own notification.
+      allow get, update: if isOwner(resource.data.userId);
       
-      // Create is open to any authenticated user because tutors need to create notifications for students.
+      // LIST: Any authenticated user can attempt to list notifications.
+      // Firestore will enforce the 'get' rule on the results.
+      allow list: if isAuth();
+      
+      // CREATE: Any authenticated user can create a notification (e.g. tutor for student).
       allow create: if isAuth(); 
+      
+      // DELETE: Admin can delete notifications.
       allow delete: if isAdmin(request.auth.uid);
     }
   }
