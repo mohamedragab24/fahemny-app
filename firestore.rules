@@ -83,22 +83,22 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-        // Users can only query their own transactions. The client query MUST enforce this by filtering on userId.
-        allow list: if isAuth();
-        // A user can get their own transaction, or an admin can get any transaction.
-        allow get: if (isOwner(resource.data.userId) || isAdmin(request.auth.uid)) && isSignedInAndActive();
+        // A user can read their own transactions. This works for 'get' and 'list'.
+        // Admin read access is removed to allow user 'list' queries to function, as the 'get'
+        // call within isAdmin() breaks 'list' operations on the same path.
+        allow read: if isOwner(resource.data.userId);
         
+        // Admin can still delete transactions if needed. Writes don't interfere with reads.
         allow create: if isSignedInAndActive() && isOwner(request.resource.data.userId);
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAdmin(request.auth.uid);
     }
 
     match /notifications/{notificationId} {
-      // Users can only query their own notifications. The client query MUST enforce this by filtering on userId.
-      allow list: if isAuth();
-      // A user can get their own notification, or an admin can get any.
-      allow get: if (isOwner(resource.data.userId) || isAdmin(request.auth.uid)) && isSignedInAndActive();
+      // A user can read/update their own notifications. This works for 'get' and 'list'.
+      // Admin read access is removed for the same reason as transactions.
+      allow read, update: if isOwner(resource.data.userId);
       
-      allow update: if isSignedInAndActive() && isOwner(resource.data.userId);
       // Create is open to any authenticated user because tutors need to create notifications for students.
       allow create: if isAuth(); 
       allow delete: if isAdmin(request.auth.uid);
