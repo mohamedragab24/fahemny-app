@@ -4,11 +4,9 @@ service cloud.firestore {
 
     // --- Helper Functions ---
     
-    // SAFE for all rules, including list queries.
     function isAuth() {
       return request.auth != null;
     }
-    // SAFE for all rules.
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
@@ -16,15 +14,14 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /userProfiles/{userId} {
-      // Read: Any authenticated user can read profiles.
-      // This is required to make list queries work without 'get' calls in rules.
-      allow read: if isAuth();
+      // Read: Any authenticated user can get a specific profile. List is not allowed.
+      allow get: if isAuth();
       
       // Create: A user can create their own profile.
       allow create: if isOwner(userId);
       
       // Update: A user can update their own profile. Admin logic removed for query safety.
-      allow update: if isAuth() && isOwner(userId);
+      allow update: if isOwner(userId);
       
       // Delete: No one can delete profiles.
       allow delete: if false;
@@ -59,7 +56,7 @@ service cloud.firestore {
       );
       
       // Delete: Student can delete their own 'open' request. Admin logic removed.
-      allow delete: if isAuth() && (isOwner(resource.data.studentId) && resource.data.status == 'open');
+      allow delete: if isAuth() && isOwner(resource.data.studentId) && resource.data.status == 'open';
     }
 
     match /transactions/{transactionId} {
