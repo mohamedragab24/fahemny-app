@@ -47,20 +47,52 @@ service cloud.firestore {
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
       allow update: if isSignedIn() && (
-        // A tutor can accept an open request
-        (isTutor(request.auth.uid) && resource.data.tutorId == null && request.resource.data.status == 'open' && request.resource.data.status == 'accepted') ||
-        
-        // The student who created the request can cancel it if it's open or accepted
-        (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
-        
-        // The assigned tutor can cancel an accepted request
-        (isOwner(resource.data.tutorId) && resource.data.status == 'accepted' && request.resource.data.status == 'cancelled') ||
-        
-        // Either the student or the tutor can mark an accepted session as completed
-        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed') ||
-
-        // Either participant can add a rating to a completed session
-        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'completed' && (request.resource.data.keys().hasAny(['tutorRating', 'studentRating'])))
+        // 1. A tutor accepts an open request.
+        (
+            isTutor(request.auth.uid) &&
+            resource.data.status == 'open' &&
+            resource.data.tutorId == null &&
+            request.resource.data.status == 'accepted' &&
+            request.resource.data.tutorId == request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'tutorId', 'meetingLink'])
+        ) ||
+        // 2. The student who created it cancels (if open or accepted).
+        (
+            isOwner(resource.data.studentId) &&
+            (resource.data.status == 'open' || resource.data.status == 'accepted') &&
+            request.resource.data.status == 'cancelled' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        ) ||
+        // 3. The assigned tutor cancels an accepted request.
+        (
+            isOwner(resource.data.tutorId) &&
+            resource.data.status == 'accepted' &&
+            request.resource.data.status == 'cancelled' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        ) ||
+        // 4. Either participant marks an accepted session as completed.
+        (
+            (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) &&
+            resource.data.status == 'accepted' &&
+            request.resource.data.status == 'completed' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        ) ||
+        // 5. The student rates the tutor on a completed session.
+        (
+            isOwner(resource.data.studentId) &&
+            resource.data.status == 'completed' &&
+            resource.data.tutorRating == null && // Can only rate once
+            request.resource.data.tutorRating != null &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tutorRating'])
+        ) ||
+        // 6. The tutor rates the student on a completed session.
+        (
+            isOwner(resource.data.tutorId) &&
+            resource.data.status == 'completed' &&
+            resource.data.studentRating == null && // Can only rate once
+            request.resource.data.studentRating != null &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentRating'])
+        )
       );
       
       allow delete: if isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open';
