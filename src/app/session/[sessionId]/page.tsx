@@ -133,14 +133,28 @@ export default function SessionPage() {
     }
     
     if (error) {
+        const isPrivateKeyError = error.includes('Jitsi private key is not set');
+
         return (
              <div className="container mx-auto py-16 px-4">
                 <Alert variant="destructive">
                     <Terminal className="h-4 w-4" />
-                    <AlertTitle>خطأ في بدء الجلسة</AlertTitle>
+                     <AlertTitle>
+                         {isPrivateKeyError ? 'إعدادات الجلسة غير مكتملة' : 'خطأ في بدء الجلسة'}
+                    </AlertTitle>
                     <AlertDescription>
-                        <p>لم نتمكن من بدء جلسة الفيديو. الرجاء المحاولة مرة أخرى لاحقًا.</p>
-                         <p className="text-xs mt-4 font-mono">{error}</p>
+                        {isPrivateKeyError ? (
+                            <>
+                                <p className="mb-2">يبدو أن المفتاح الخاص بخدمة الفيديو (Jitsi/8x8) لم يتم إعداده بعد.</p>
+                                <p>هذا المفتاح ضروري لتأمين الجلسات. يرجى مراجعة الإعدادات في الملف التالي والتأكد من إضافة المفتاح الصحيح:</p>
+                                <code className="block bg-muted p-2 rounded-md my-2 text-sm font-mono break-all">src/ai/flows/generate-jitsi-jwt.ts</code>
+                            </>
+                        ) : (
+                            <>
+                                <p>لم نتمكن من بدء جلسة الفيديو. الرجاء المحاولة مرة أخرى لاحقًا.</p>
+                                <p className="text-xs mt-4 font-mono">{error}</p>
+                            </>
+                        )}
                     </AlertDescription>
                 </Alert>
             </div>
