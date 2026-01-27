@@ -46,6 +46,7 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handleRatingSubmit = async () => {
     if (rating === 0) {
@@ -58,7 +59,7 @@ function RatingDialog({ session, userRole, open, onOpenChange, onSubmitted }: { 
     const ratedUserId = userRole === 'student' ? session.tutorId : session.studentId;
 
     try {
-      const sessionRef = doc(useFirestore(), 'sessionRequests', session.id);
+      const sessionRef = doc(firestore, 'sessionRequests', session.id);
       await updateDoc(sessionRef, { [ratedField]: rating });
 
       // After submitting rating, update the average rating for the other user.
@@ -270,14 +271,12 @@ export default function MySessionsPage() {
             <CardFooter className="flex flex-col items-stretch gap-2">
                 {session.status === 'accepted' && (
                     <>
-                        {session.meetingLink && (
-                             <Button asChild>
-                                <Link href={session.meetingLink} target="_blank" rel="noopener noreferrer">
-                                    <Video className="me-2 h-4 w-4" />
-                                    دخول الجلسة
-                                </Link>
-                            </Button>
-                        )}
+                        <Button asChild>
+                            <Link href={`/session/${session.id}`} target="_blank">
+                                <Video className="me-2 h-4 w-4" />
+                                دخول الجلسة
+                            </Link>
+                        </Button>
                         <div className="flex gap-2">
                             <Button 
                                 variant="outline"

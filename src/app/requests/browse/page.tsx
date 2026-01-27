@@ -4,14 +4,14 @@ import { useState } from 'react';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createMeetingLink } from '@/ai/flows/create-zoom-meeting';
 import { useRouter } from 'next/navigation';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
@@ -49,30 +49,19 @@ export default function BrowseRequestsPage() {
     setAcceptingId(request.id);
 
     try {
-      // 1. Create unique meeting link
-      const topic = request.title;
-      const startTime = new Date(`${request.sessionDate}T${request.sessionTime}:00`).toISOString();
-      
-      toast({ title: 'جارٍ إنشاء رابط الجلسة...', description: 'قد يستغرق هذا بضع لحظات.' });
-
-      const meetingLink = await createMeetingLink({ topic, startTime, sessionId: request.id });
-
-      if (!meetingLink) {
-        throw new Error('Failed to get meeting link.');
-      }
-      
-      // 2. Update Firestore document
       const requestRef = doc(firestore, 'sessionRequests', request.id);
-      await updateDoc(requestRef, {
+      
+      // We only need to update the status and assign the tutor.
+      // The meeting link is now dynamically handled on the session page.
+      updateDocumentNonBlocking(requestRef, {
         status: 'accepted',
         tutorId: user.uid,
-        meetingLink: meetingLink,
       });
 
       toast({
         variant: 'default',
         title: 'تم قبول الطلب!',
-        description: 'تم إنشاء رابط الجلسة وسيتم توجيهك لصفحة جلساتك.',
+        description: 'تم تحديث الطلب وسيتم توجيهك لصفحة جلساتك.',
       });
 
       router.push('/sessions');
@@ -82,7 +71,7 @@ export default function BrowseRequestsPage() {
       toast({
         variant: 'destructive',
         title: 'فشل قبول الطلب',
-        description: error.message || 'حدث خطأ أثناء إنشاء رابط الجلسة أو تحديث الطلب.',
+        description: error.message || 'حدث خطأ أثناء تحديث الطلب.',
       });
     } finally {
       setAcceptingId(null);
@@ -152,7 +141,7 @@ export default function BrowseRequestsPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       جار القبول...
                     </>
-                  ) : "قبول الطلب وإنشاء جلسة"}
+                  ) : "قبول الطلب"}
                 </Button>
               </CardFooter>
             </Card>

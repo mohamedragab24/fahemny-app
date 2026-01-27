@@ -22,7 +22,6 @@ export type SessionRequest = {
   sessionTime: string;
   tutorGender: 'male' | 'female' | 'any';
   status: 'open' | 'accepted' | 'completed' | 'cancelled';
-  meetingLink?: string;
   createdAt: string;
   studentRating?: number;
   tutorRating?: number;

@@ -107,11 +107,6 @@
             "cancelled"
           ]
         },
-        "meetingLink": {
-          "type": "string",
-          "description": "The Zoom/Meet link for the session, provided by the tutor.",
-          "format": "uri"
-        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the request was posted.",
