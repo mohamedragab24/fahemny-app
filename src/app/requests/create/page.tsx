@@ -10,14 +10,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const requestSchema = z.object({
   title: z.string().min(10, 'العنوان يجب أن يكون 10 أحرف على الأقل'),
@@ -36,7 +33,6 @@ export default function CreateRequestPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -57,51 +53,10 @@ export default function CreateRequestPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof requestSchema>) {
-    if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'خطأ',
-        description: 'يجب تسجيل الدخول لنشر طلب.',
-      });
-      return;
-    }
-    
-    if (userProfile?.role !== 'student') {
-       toast({
-        variant: 'destructive',
-        title: 'غير مصرح به',
-        description: 'هذه الصفحة مخصصة للمستفهمين فقط.',
-      });
-      return;
-    }
-
-    try {
-      const requestsCollection = collection(firestore, 'sessionRequests');
-      const newRequest = {
-          ...values,
-          studentId: user.uid,
-          status: 'open' as 'open',
-          createdAt: new Date().toISOString(),
-      };
-
-      addDocumentNonBlocking(requestsCollection, newRequest);
-
-      toast({
-          title: 'تم نشر طلبك بنجاح!',
-          description: 'سيتم توجيهك الآن إلى صفحة الدفع (محاكاة).',
-      });
-      
-      router.push('/payment');
-
-    } catch (error: any) {
-      console.error("Failed to create request:", error);
-      toast({
-        variant: 'destructive',
-        title: 'فشل نشر الطلب',
-        description: 'حدث خطأ غير متوقع.'
-      });
-    }
+  function onSubmit(values: z.infer<typeof requestSchema>) {
+    // Save data to sessionStorage and navigate to the review page
+    sessionStorage.setItem('newRequestData', JSON.stringify(values));
+    router.push('/requests/create/review');
   }
   
   if (isUserLoading || isProfileLoading) {
@@ -149,7 +104,7 @@ export default function CreateRequestPage() {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="font-headline">{t.create_request}</CardTitle>
-          <CardDescription>املأ النموذج التالي لنشر طلبك والانتقال إلى صفحة الدفع.</CardDescription>
+          <CardDescription>املأ النموذج التالي لنشر طلبك.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -258,13 +213,8 @@ export default function CreateRequestPage() {
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        جارٍ النشر...
-                    </>
-                ) : 'نشر الطلب والانتقال للدفع'}
+              <Button type="submit" className="w-full">
+                مراجعة الطلب
               </Button>
             </form>
           </Form>

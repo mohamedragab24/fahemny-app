@@ -25,7 +25,7 @@ export const createZoomMeetingFlow = ai.defineFlow(
     const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
 
     if (!zoomAccountId || !zoomClientId || !zoomClientSecret) {
-      throw new Error('Zoom environment variables are not set. Please check your .env.local file.');
+      throw new Error('Zoom environment variables are not set. Please check your environment configuration.');
     }
 
     // 1. Get Access Token
