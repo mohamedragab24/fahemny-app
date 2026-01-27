@@ -131,6 +131,7 @@ export default {
     email_label: 'البريد الإلكتروني',
     email_placeholder: 'email@example.com',
     password_label: 'كلمة المرور',
+    forgot_password_link: 'هل نسيت كلمة المرور؟',
     submit_button: 'تسجيل الدخول',
     submitting_button: 'جارٍ الدخول...',
     signup_link_text: 'ليس لديك حساب؟',
@@ -148,6 +149,15 @@ export default {
     submitting_button: 'جارٍ الإنشاء...',
     login_link_text: 'لديك حساب بالفعل؟',
     login_link: 'سجل الدخول',
+  },
+  forgot_password: {
+    title: 'نسيت كلمة المرور؟',
+    description: 'لا تقلق. أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيينها.',
+    submit_button: 'إرسال رابط إعادة التعيين',
+    submitting_button: 'جارٍ الإرسال...',
+    success_title: 'تم إرسال الرابط!',
+    success_description: 'تفقد بريدك الإلكتروني (بما في ذلك مجلد الرسائل غير المرغوب فيها) للحصول على رابط إعادة تعيين كلمة المرور.',
+    back_to_login: 'العودة إلى صفحة تسجيل الدخول',
   },
   select_role: {
     title: 'اختر دورك',
@@ -310,5 +320,9 @@ export default {
     filter_by_field: 'تصفية حسب المجال',
     all_fields: 'كل المجالات',
     price_range: 'نطاق السعر',
+  },
+  project_details: {
+      by_employer: 'بواسطة',
+      view_project: 'عرض التفاصيل',
   }
 } as const;

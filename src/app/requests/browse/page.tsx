@@ -15,6 +15,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { UserInfoLink } from '@/components/UserInfoLink';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
@@ -194,6 +195,9 @@ export default function BrowseRequestsPage() {
             <Card key={request.id} className="flex flex-col">
               <CardHeader>
                 <CardTitle>{request.title}</CardTitle>
+                 <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <span>بواسطة:</span><UserInfoLink userId={request.studentId} className="text-sm" />
+                </div>
                 <CardDescription>{request.field}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">

@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,41 +25,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
-const loginSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email("بريد إلكتروني غير صالح"),
-  password: z.string().min(1, "كلمة المرور مطلوبة"),
 });
 
-export default function LoginPage() {
-  const t = ar.login;
-  const router = useRouter();
+export default function ForgotPasswordPage() {
+  const t = ar.forgot_password;
   const auth = useAuth();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<z.infer<typeof forgotPasswordSchema>>({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
-      password: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof loginSchema>) {
+  async function onSubmit(values: z.infer<typeof forgotPasswordSchema>) {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      await sendPasswordResetEmail(auth, values.email);
       toast({
-        title: "تم تسجيل الدخول!",
-        description: "أهلاً بعودتك.",
+        title: t.success_title,
+        description: t.success_description,
       });
-      router.push("/");
+      form.reset();
     } catch (error: any) {
-      console.error("Login failed:", error);
+      console.error("Password reset failed:", error);
       toast({
         variant: "destructive",
         title: "حدث خطأ!",
-        description: "فشل تسجيل الدخول. تأكد من صحة البريد الإلكتروني وكلمة المرور.",
+        description: "فشل إرسال رابط إعادة التعيين. تأكد من صحة البريد الإلكتروني.",
       });
     }
   }
@@ -81,34 +77,13 @@ export default function LoginPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t.email_label}</FormLabel>
+                  <FormLabel>{ar.login.email_label}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder={t.email_placeholder}
+                      placeholder={ar.login.email_placeholder}
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>{t.password_label}</FormLabel>
-                     <Link
-                      href="/forgot-password"
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t.forgot_password_link}
-                    </Link>
-                  </div>
-                  <FormControl>
-                    <Input type="password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,9 +97,9 @@ export default function LoginPage() {
         </Form>
       </CardContent>
       <div className="mt-4 text-center text-sm p-6 pt-0">
-        {t.signup_link_text}{" "}
-        <Link href="/register" className="underline">
-          {t.signup_link}
+         <Link href="/login" className="flex items-center justify-center gap-1 text-muted-foreground hover:text-primary">
+            <ArrowLeft className="h-4 w-4" />
+            <span>{t.back_to_login}</span>
         </Link>
       </div>
     </Card>

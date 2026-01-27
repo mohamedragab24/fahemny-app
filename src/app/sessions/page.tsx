@@ -15,6 +15,8 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { UserInfoLink } from '@/components/UserInfoLink';
+
 
 // Helper component to display the other user's name and rating
 function OtherUserDetails({ userId, label }: { userId: string, label: string }) {
@@ -30,7 +32,10 @@ function OtherUserDetails({ userId, label }: { userId: string, label: string }) 
 
   return (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <p>{label}: {userProfile.name}</p>
+        <div className="flex items-center gap-1">
+            <span>{label}:</span>
+            <UserInfoLink userId={userId} className="text-sm font-semibold" />
+        </div>
         {userProfile.rating && (
             <div className="flex items-center gap-1 text-yellow-500">
                 <Star className="w-4 h-4 fill-current" />

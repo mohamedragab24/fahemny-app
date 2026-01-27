@@ -1,27 +1,14 @@
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
-import type { SessionRequest, UserProfile } from '@/lib/types';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import type { SessionRequest } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import ar from '@/locales/ar';
-
-// Helper to get user names
-function UserInfo({ userId }: { userId?: string }) {
-    const firestore = useFirestore();
-    const userProfileRef = useMemoFirebase(
-        () => (userId ? doc(firestore, 'userProfiles', userId) : null),
-        [firestore, userId]
-    );
-    const { data: userProfile, isLoading } = useDoc<UserProfile>(userProfileRef);
-
-    if (!userId) return <span className="text-muted-foreground">-</span>;
-    if (isLoading) return <Skeleton className="h-5 w-24" />;
-    return <span>{userProfile?.name || 'غير موجود'}</span>;
-}
+import { UserInfoLink } from '@/components/UserInfoLink';
 
 
 export default function AdminSessionsPage() {
@@ -75,8 +62,8 @@ export default function AdminSessionsPage() {
               {sessions && sessions.length > 0 ? sessions.map((session) => (
                 <TableRow key={session.id}>
                   <TableCell className="font-medium max-w-xs truncate">{session.title}</TableCell>
-                  <TableCell><UserInfo userId={session.studentId} /></TableCell>
-                  <TableCell><UserInfo userId={session.tutorId} /></TableCell>
+                  <TableCell><UserInfoLink userId={session.studentId} /></TableCell>
+                  <TableCell><UserInfoLink userId={session.tutorId} /></TableCell>
                   <TableCell>{new Date(session.createdAt).toLocaleDateString('ar-EG')}</TableCell>
                   <TableCell>{session.price} جنيه</TableCell>
                   <TableCell>

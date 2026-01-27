@@ -8,24 +8,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import ar from '@/locales/ar';
-import { UserProfile } from '@/lib/types';
-import { useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { UserInfoLink } from '@/components/UserInfoLink';
+
 
 function UserInfo({ userId }: { userId: string }) {
-    const firestore = useFirestore();
-    const userProfileRef = useMemoFirebase(
-        () => (userId ? doc(firestore, 'userProfiles', userId) : null),
-        [firestore, userId]
-    );
-    const { data: userProfile, isLoading } = useDoc<UserProfile>(userProfileRef);
-
-    if (isLoading) return <Skeleton className="h-5 w-24" />;
-    if (!userProfile) return <span className="text-xs font-mono">{userId}</span>;
-
     return (
          <div className="flex flex-col">
-            <span className="font-medium text-xs">{userProfile.name}</span>
+            <UserInfoLink userId={userId} className="font-medium text-sm text-primary" />
             <span className="text-xs text-muted-foreground font-mono">{userId}</span>
         </div>
     );
