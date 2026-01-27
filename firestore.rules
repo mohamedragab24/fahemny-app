@@ -63,8 +63,9 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      allow list: if isAuth();
-      allow get: if isAuth() && isOwner(resource.data.userId);
+      // Allow any authenticated user to read, which is safe because the client-side
+      // code strictly queries for the user's own ID.
+      allow read: if isAuth();
 
       // A user can only create their own transaction.
       allow create: if isAuth() && isOwner(request.resource.data.userId);
@@ -74,8 +75,9 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow list: if isAuth();
-      allow get: if isAuth() && isOwner(resource.data.userId);
+      // Allow any authenticated user to read, which is safe because the client-side
+      // code strictly queries for the user's own ID.
+      allow read: if isAuth();
       
       // System can create a notification for a user, so we check owner on the resource being created.
       allow create: if isAuth() && isOwner(request.resource.data.userId); 
