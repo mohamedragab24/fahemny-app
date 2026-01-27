@@ -14,7 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function getInitials(name?: string) {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+    if (typeof name !== 'string' || !name) {
+        return '?';
+    }
+    return name.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
 }
 
 export default function AdminUsersPage() {
@@ -73,7 +76,7 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.photoURL} alt={user.name} />
+                            <AvatarImage src={user.photoURL} alt={user.name || ''} />
                             <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
