@@ -14,16 +14,20 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/userProfiles/$(userId)).data.role;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/userProfiles/$(userId)).data;
     }
 
     function isStudent(userId) {
-      return getUserRole(userId) == 'student';
+      return getUserData(userId).role == 'student';
     }
 
     function isTutor(userId) {
-      return getUserRole(userId) == 'tutor';
+      return getUserData(userId).role == 'tutor';
+    }
+    
+    function isAdmin(userId) {
+      return isSignedIn() && getUserData(userId).isAdmin == true;
     }
 
     // ----------------------------------------------------------------------
@@ -32,73 +36,35 @@ service cloud.firestore {
 
     match /userProfiles/{userId} {
       allow get: if true;
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && isAdmin(request.auth.uid);
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin(request.auth.uid);
       allow delete: if false;
     }
 
     match /sessionRequests/{requestId} {
       allow get: if isSignedIn() && 
-                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId) || isOwner(resource.data.tutorId));
+                    (isTutor(request.auth.uid) || isOwner(resource.data.studentId) || isOwner(resource.data.tutorId) || isAdmin(request.auth.uid));
       
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && (isTutor(request.auth.uid) || isAdmin(request.auth.uid));
       
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
       allow update: if isSignedIn() && (
-        // 1. A tutor accepts an open request. (SIMPLIFIED)
-        (
-            isTutor(request.auth.uid) &&
-            resource.data.status == 'open' &&
-            request.resource.data.status == 'accepted'
-        ) ||
-        // 2. The student who created it cancels (if open or accepted).
-        (
-            isOwner(resource.data.studentId) &&
-            (resource.data.status == 'open' || resource.data.status == 'accepted') &&
-            request.resource.data.status == 'cancelled' &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        ) ||
-        // 3. The assigned tutor cancels an accepted request.
-        (
-            isOwner(resource.data.tutorId) &&
-            resource.data.status == 'accepted' &&
-            request.resource.data.status == 'cancelled' &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        ) ||
-        // 4. Either participant marks an accepted session as completed.
-        (
-            (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) &&
-            resource.data.status == 'accepted' &&
-            request.resource.data.status == 'completed' &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        ) ||
-        // 5. The student rates the tutor on a completed session.
-        (
-            isOwner(resource.data.studentId) &&
-            resource.data.status == 'completed' &&
-            resource.data.tutorRating == null && // Can only rate once
-            request.resource.data.tutorRating != null &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tutorRating'])
-        ) ||
-        // 6. The tutor rates the student on a completed session.
-        (
-            isOwner(resource.data.tutorId) &&
-            resource.data.status == 'completed' &&
-            resource.data.studentRating == null && // Can only rate once
-            request.resource.data.studentRating != null &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentRating'])
-        )
+        (isTutor(request.auth.uid) && resource.data.status == 'open' && request.resource.data.status == 'accepted') ||
+        (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
+        ((isOwner(resource.data.studentId) || isOwner(resource.data.tutorId)) && resource.data.status == 'accepted' && request.resource.data.status == 'completed') ||
+        (isOwner(resource.data.studentId) && resource.data.status == 'completed' && resource.data.tutorRating == null) ||
+        (isOwner(resource.data.tutorId) && resource.data.status == 'completed' && resource.data.studentRating == null)
       );
       
       allow delete: if isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open';
     }
 
     match /transactions/{transactionId} {
-        // Users can read and create their own transactions, but cannot update or delete them.
-        allow get, list: if isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/transactions/$(transactionId)).data.userId;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+        allow list: if isSignedIn(); // Client must filter by userId
+        allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
   }
