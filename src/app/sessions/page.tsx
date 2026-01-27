@@ -174,13 +174,29 @@ export default function MySessionsPage() {
 
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
 
-  const handleUpdateStatus = (session: SessionRequest, newStatus: 'completed' | 'cancelled') => {
+  const handleUpdateStatus = async (session: SessionRequest, newStatus: 'completed' | 'cancelled') => {
     setUpdatingId(session.id);
-    const sessionRef = doc(firestore, 'sessionRequests', session.id);
-    updateDocumentNonBlocking(sessionRef, { status: newStatus });
-    
-    // If completed, create transactions
+
+    // If completing session, check student balance first
     if (newStatus === 'completed' && session.tutorId) {
+        // 1. Get student's transactions to calculate balance
+        const transactionsQuery = query(collection(firestore, 'transactions'), where('userId', '==', session.studentId));
+        const transactionsSnapshot = await getDocs(transactionsQuery);
+        const studentTransactions = transactionsSnapshot.docs.map(doc => doc.data() as Transaction);
+        const currentBalance = studentTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+
+        // 2. Check if balance is sufficient
+        if (currentBalance < session.price) {
+            toast({
+                variant: 'destructive',
+                title: 'رصيد غير كافٍ',
+                description: 'رصيد الطالب غير كافٍ لإتمام هذه الجلسة. يجب على الطالب شحن محفظته أولاً.',
+            });
+            setUpdatingId(null);
+            return;
+        }
+
+        // 3. If balance is sufficient, create transactions
         const transactionsCol = collection(firestore, 'transactions');
         
         // Student payment
@@ -204,6 +220,10 @@ export default function MySessionsPage() {
         });
     }
 
+    // This runs for both 'completed' and 'cancelled'
+    const sessionRef = doc(firestore, 'sessionRequests', session.id);
+    updateDocumentNonBlocking(sessionRef, { status: newStatus });
+    
     toast({
         title: `تم تحديث حالة الجلسة`,
         description: `تم ${newStatus === 'completed' ? 'إنهاء' : 'إلغاء'} الجلسة بنجاح.`
