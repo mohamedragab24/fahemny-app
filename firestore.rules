@@ -85,18 +85,23 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // User can read their own transactions.
-      allow read: if isOwner(resource.data.userId);
-      
-      // Writes are separate and can use more complex helpers.
+      // A user can GET their own transaction.
+      allow get: if isOwner(resource.data.userId);
+      // An authenticated user can attempt to LIST their transactions.
+      // The client query MUST constrain this to documents they own for the operation to succeed.
+      allow list: if isAuth();
+
       allow create: if isAuth() && isOwner(request.resource.data.userId);
       allow update: if false;
       allow delete: if false;
     }
 
     match /notifications/{notificationId} {
-      // A user can read or update (mark as read) their own notification.
-      allow read, update: if isOwner(resource.data.userId);
+      // A user can GET or UPDATE (mark as read) their own notification.
+      allow get, update: if isOwner(resource.data.userId);
+      // An authenticated user can attempt to LIST their notifications.
+      // The client query MUST constrain this to documents they own for the operation to succeed.
+      allow list: if isAuth();
       
       // CREATE: Any authenticated user can create a notification (e.g. tutor for student).
       allow create: if isAuth(); 
