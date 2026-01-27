@@ -241,6 +241,7 @@ export default {
         sessions: 'إدارة الجلسات',
         withdrawals: 'طلبات السحب',
         discounts: 'أكواد الخصم',
+        add_balance: 'إضافة رصيد',
     },
     access_denied: {
         title: 'الوصول مرفوض',
@@ -264,7 +265,6 @@ export default {
             status: 'الحالة',
             is_admin: 'مسؤول؟',
             is_disabled: 'محظور؟',
-            actions: 'إجراءات',
         },
     },
     transactions: {
@@ -338,6 +338,26 @@ export default {
         active: 'نشط',
         inactive: 'غير نشط',
         confirm_delete: 'هل أنت متأكد من حذف هذا الكود؟ لا يمكن التراجع عن هذا الإجراء.',
+    },
+    add_balance: {
+        title: 'إضافة رصيد لمستخدم',
+        description: 'ابحث عن المستخدم عن طريق البريد الإلكتروني أو المعرف (ID) ثم قم بإضافة الرصيد إلى محفظته.',
+        search_label: 'البريد الإلكتروني أو ID المستخدم',
+        search_placeholder: 'user@example.com or aBcDeFg123...',
+        search_button: 'بحث',
+        searching_button: 'جارٍ البحث...',
+        user_not_found: 'لم يتم العثور على مستخدم بهذه البيانات.',
+        user_details: 'تفاصيل المستخدم',
+        current_balance: 'الرصيد الحالي',
+        add_balance_to: 'إضافة رصيد إلى: {name}',
+        amount_label: 'المبلغ (بالجنيه)',
+        description_label: 'سبب الإضافة (سيظهر للمستخدم)',
+        description_placeholder: 'مثال: جائزة مسابقة، تعويض عن مشكلة...',
+        submit_button: 'تأكيد الإضافة',
+        submitting_button: 'جارٍ الإضافة...',
+        success_toast_title: 'تمت الإضافة بنجاح',
+        success_toast_description: 'تمت إضافة {amount} جنيه إلى رصيد {name}.',
+        error_toast_title: 'فشلت الإضافة',
     }
   },
   notifications: {

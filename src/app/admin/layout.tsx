@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { LayoutDashboard, ShieldAlert, Users, CreditCard, BookCopy, HandCoins, TicketPercent } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, Users, CreditCard, BookCopy, HandCoins, TicketPercent, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ar from '@/locales/ar';
 
@@ -28,6 +28,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navItems: { href: string, label: string, icon: ReactNode }[] = [
     { href: '/admin/dashboard', label: t.nav.dashboard, icon: <LayoutDashboard className="h-4 w-4" /> },
     { href: '/admin/users', label: t.nav.users, icon: <Users className="h-4 w-4" /> },
+    { href: '/admin/add-balance', label: t.nav.add_balance, icon: <Coins className="h-4 w-4" /> },
     { href: '/admin/sessions', label: t.nav.sessions, icon: <BookCopy className="h-4 w-4" /> },
     { href: '/admin/transactions', label: t.nav.transactions, icon: <CreditCard className="h-4 w-4" /> },
     { href: '/admin/withdrawals', label: t.nav.withdrawals, icon: <HandCoins className="h-4 w-4" /> },
