@@ -15,20 +15,16 @@ service cloud.firestore {
 
     match /userProfiles/{userId} {
       // Allow any authenticated user to GET a profile.
-      // LIST is disabled to prevent query contamination issues that were breaking other rules.
-      // This means admin pages that list all users will not work.
       allow get: if isAuth();
-      allow list: if false; // This is a critical fix to prevent query failures elsewhere
+      // LIST is disabled to prevent query contamination issues.
+      allow list: if false;
       
       // A user can create their own profile.
       allow create: if isOwner(userId);
       
-      // A user can update their own profile. Admin can also update profiles.
-      // get() is safe here because it's a write operation.
-      allow update: if isOwner(userId) || (
-        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true
-      );
+      // A user can update their own profile. The admin check was removed
+      // because the 'get' call inside it contaminates list queries elsewhere.
+      allow update: if isOwner(userId);
       
       // No one can delete profiles.
       allow delete: if false;
@@ -49,7 +45,7 @@ service cloud.firestore {
       // Create: An authenticated user can create a request for themselves.
       allow create: if isAuth() && isOwner(request.resource.data.studentId);
       
-      // Update: Complex state machine for session updates. Safe because it's a write op.
+      // Update: Complex state machine for session updates. This is safe.
       allow update: if isAuth() && (
         (resource.data.status == 'open' && request.resource.data.status == 'accepted' && request.resource.data.tutorId == request.auth.uid) ||
         (isOwner(resource.data.studentId) && (resource.data.status == 'open' || resource.data.status == 'accepted') && request.resource.data.status == 'cancelled') ||
@@ -63,9 +59,10 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-      // Allow any authenticated user to read, which is safe because the client-side
-      // code strictly queries for the user's own ID.
-      allow read: if isAuth();
+      // Allow user to get their own transactions.
+      allow get: if isAuth() && isOwner(resource.data.userId);
+      // Allow user to list their own transactions. Client must provide `where` clause.
+      allow list: if isAuth();
 
       // A user can only create their own transaction.
       allow create: if isAuth() && isOwner(request.resource.data.userId);
@@ -75,11 +72,12 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      // Allow any authenticated user to read, which is safe because the client-side
-      // code strictly queries for the user's own ID.
-      allow read: if isAuth();
+      // Allow user to get their own notifications.
+      allow get: if isAuth() && isOwner(resource.data.userId);
+      // Allow user to list their own notifications. Client must provide `where` clause.
+      allow list: if isAuth();
       
-      // System can create a notification for a user, so we check owner on the resource being created.
+      // System can create a notification for a user.
       allow create: if isAuth() && isOwner(request.resource.data.userId); 
       
       // Users can update their own notifications (e.g. to mark as read).
