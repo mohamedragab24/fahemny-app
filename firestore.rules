@@ -62,18 +62,15 @@ service cloud.firestore {
     }
 
     match /transactions/{transactionId} {
-        allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        // Client must filter by userId. Query is validated against 'get' rule.
+        allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
         allow create: if isSignedIn() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow get: if isSignedIn() && isOwner(resource.data.userId);
-      // Queries are validated against 'get' rule. Client must filter by userId.
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
       allow update: if isSignedIn() && isOwner(resource.data.userId); // For marking as read
-      // Allow creation of notifications. Should be locked down to backend functions.
-      allow create: if isSignedIn();
+      allow create: if isSignedIn(); // Should be locked down to backend functions
       allow delete: if false;
     }
   }
