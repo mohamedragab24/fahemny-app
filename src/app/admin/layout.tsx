@@ -28,9 +28,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navItems: { href: string, label: string, icon: ReactNode }[] = [
     { href: '/admin/dashboard', label: t.nav.dashboard, icon: <LayoutDashboard className="h-4 w-4" /> },
     { href: '/admin/users', label: t.nav.users, icon: <Users className="h-4 w-4" /> },
-    { href: '/admin/add-balance', label: t.nav.add_balance, icon: <Coins className="h-4 w-4" /> },
     { href: '/admin/sessions', label: t.nav.sessions, icon: <BookCopy className="h-4 w-4" /> },
     { href: '/admin/transactions', label: t.nav.transactions, icon: <CreditCard className="h-4 w-4" /> },
+    { href: '/admin/add-balance', label: t.nav.add_balance, icon: <Coins className="h-4 w-4" /> },
+    { href: '/admin/withdraw-balance', label: t.nav.withdraw_balance, icon: <HandCoins className="h-4 w-4" /> },
     { href: '/admin/withdrawals', label: t.nav.withdrawals, icon: <HandCoins className="h-4 w-4" /> },
     { href: '/admin/discounts', label: t.nav.discounts, icon: <TicketPercent className="h-4 w-4" /> },
   ];
