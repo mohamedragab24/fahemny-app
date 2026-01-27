@@ -5,6 +5,7 @@ export type UserProfile = {
   role?: 'student' | 'tutor';
   photoURL?: string;
   rating?: number;
+  balance?: number;
   isVerified?: boolean;
   isAdmin?: boolean;
   disabled?: boolean;

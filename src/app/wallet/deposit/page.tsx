@@ -11,7 +11,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc, increment } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Loader2 } from 'lucide-react';
 
@@ -33,30 +33,45 @@ export default function DepositPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof depositSchema>) {
+  async function onSubmit(values: z.infer<typeof depositSchema>) {
     if (!user) {
         toast({ variant: 'destructive', title: 'خطأ', description: 'يجب تسجيل الدخول أولاً.' });
         router.push('/login');
         return;
     }
     
-    const transactionsCollection = collection(firestore, 'transactions');
-    const newTransaction = {
-        userId: user.uid,
-        type: 'deposit' as const,
-        amount: values.amount,
-        description: `إيداع رصيد في المحفظة`,
-        createdAt: new Date().toISOString(),
-    };
+    form.formState.isSubmitting = true;
 
-    addDocumentNonBlocking(transactionsCollection, newTransaction);
-    
-    toast({
-        title: t.success_toast_title,
-        description: `تم إضافة ${values.amount} جنيه إلى رصيدك.`,
-    });
-    
-    router.push('/wallet');
+    try {
+        const userProfileRef = doc(firestore, 'userProfiles', user.uid);
+        await updateDoc(userProfileRef, { balance: increment(values.amount) });
+        
+        const transactionsCollection = collection(firestore, 'transactions');
+        const newTransaction = {
+            userId: user.uid,
+            type: 'deposit' as const,
+            amount: values.amount,
+            description: `إيداع رصيد في المحفظة`,
+            createdAt: new Date().toISOString(),
+        };
+        addDocumentNonBlocking(transactionsCollection, newTransaction);
+        
+        toast({
+            title: t.success_toast_title,
+            description: `تم إضافة ${values.amount} جنيه إلى رصيدك.`,
+        });
+        
+        router.push('/wallet');
+
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'فشل الإيداع',
+            description: error.message || 'حدث خطأ غير متوقع.',
+        });
+    } finally {
+        form.formState.isSubmitting = false;
+    }
   }
 
   return (

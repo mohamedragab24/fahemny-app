@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import ar from '@/locales/ar';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import type { WithdrawalRequest } from '@/lib/types';
+import { collection, query, orderBy, doc, runTransaction, increment } from 'firebase/firestore';
+import type { WithdrawalRequest, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,36 +28,56 @@ export default function AdminWithdrawalsPage() {
   const requestsQuery = useMemoFirebase(() => query(collection(firestore, 'withdrawalRequests'), orderBy('createdAt', 'desc')), [firestore]);
   const { data: requests, isLoading } = useCollection<WithdrawalRequest>(requestsQuery);
 
-  const handleApprove = (request: WithdrawalRequest) => {
+  const handleApprove = async (request: WithdrawalRequest) => {
     setLoadingId(request.id);
     
-    // 1. Update request status
-    const requestRef = doc(firestore, 'withdrawalRequests', request.id);
-    updateDocumentNonBlocking(requestRef, { status: 'approved' });
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const userProfileRef = doc(firestore, 'userProfiles', request.userId);
+            const userProfileSnap = await transaction.get(userProfileRef);
 
-    // 2. Create a withdrawal transaction
-    const transactionCol = collection(firestore, 'transactions');
-    addDocumentNonBlocking(transactionCol, {
-        userId: request.userId,
-        type: 'withdrawal',
-        amount: -request.amount,
-        description: `سحب رصيد بقيمة ${request.amount} جنيه`,
-        createdAt: new Date().toISOString()
-    });
+            if (!userProfileSnap.exists() || (userProfileSnap.data().balance ?? 0) < request.amount) {
+              throw new Error('رصيد المستخدم غير كافٍ لإتمام عملية السحب.');
+            }
 
-    // 3. Notify user
-    const notificationCol = collection(firestore, 'notifications');
-    addDocumentNonBlocking(notificationCol, {
-        userId: request.userId,
-        title: ar.notifications.withdrawal_approved_title,
-        message: ar.notifications.withdrawal_approved_message.replace('{amount}', request.amount.toString()),
-        link: '/wallet',
-        isRead: false,
-        createdAt: new Date().toISOString()
-    });
+            // 1. Update user balance
+            transaction.update(userProfileRef, { balance: increment(-request.amount) });
 
-    toast({ title: 'تمت الموافقة بنجاح' });
-    setLoadingId(null);
+            // 2. Update request status
+            const requestRef = doc(firestore, 'withdrawalRequests', request.id);
+            transaction.update(requestRef, { status: 'approved' });
+
+            // 3. Create a withdrawal transaction log
+            const transactionCol = collection(firestore, 'transactions');
+            const newTransactionRef = doc(transactionCol); // auto-generate ID
+            transaction.set(newTransactionRef, {
+                userId: request.userId,
+                type: 'withdrawal',
+                amount: -request.amount,
+                description: `سحب رصيد بقيمة ${request.amount} جنيه`,
+                createdAt: new Date().toISOString()
+            });
+        });
+
+        // 4. Notify user (outside transaction)
+        const notificationCol = collection(firestore, 'notifications');
+        addDocumentNonBlocking(notificationCol, {
+            userId: request.userId,
+            title: ar.notifications.withdrawal_approved_title,
+            message: ar.notifications.withdrawal_approved_message.replace('{amount}', request.amount.toString()),
+            link: '/wallet',
+            isRead: false,
+            createdAt: new Date().toISOString()
+        });
+
+        toast({ title: 'تمت الموافقة بنجاح' });
+
+    } catch (e: any) {
+        console.error("Approval failed:", e);
+        toast({ variant: 'destructive', title: 'فشلت الموافقة', description: e.message });
+    } finally {
+        setLoadingId(null);
+    }
   };
 
   const handleReject = (request: WithdrawalRequest) => {

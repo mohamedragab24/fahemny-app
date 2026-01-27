@@ -67,6 +67,7 @@ export default function RegisterPage() {
         createdAt: new Date().toISOString(),
         disabled: false,
         isAdmin: false,
+        balance: 0,
         // photoURL is not set initially
         // role is not set initially
       };

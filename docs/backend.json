@@ -31,6 +31,10 @@
           "type": "number",
           "description": "The user's average rating, from 1 to 5."
         },
+        "balance": {
+          "type": "number",
+          "description": "The user's current wallet balance."
+        },
         "disabled": {
           "type": "boolean",
           "description": "Whether the user account is disabled by an admin."

@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import ar from '@/locales/ar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,14 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, doc, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Loader2 } from 'lucide-react';
-import type { Transaction, UserProfile } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WithdrawPage() {
@@ -32,16 +31,7 @@ export default function WithdrawPage() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const transactionsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
-    [firestore, user]
-  );
-  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
-
-  const currentBalance = useMemo(() => {
-    if (!transactions) return 0;
-    return transactions.reduce((acc, tx) => acc + tx.amount, 0);
-  }, [transactions]);
+  const currentBalance = userProfile?.balance ?? 0;
 
   const formSchema = z.object({
     amount: z.coerce.number()
@@ -110,7 +100,7 @@ export default function WithdrawPage() {
     }
   }
 
-  const isLoading = isUserLoading || isProfileLoading || isLoadingTransactions;
+  const isLoading = isUserLoading || isProfileLoading;
 
   if (isLoading) {
     return (

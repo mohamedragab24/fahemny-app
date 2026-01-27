@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import type { SessionRequest, UserProfile, Transaction } from '@/lib/types';
-import { collection, query, where, doc, updateDoc, getDocs } from 'firebase/firestore';
+import type { SessionRequest, UserProfile } from '@/lib/types';
+import { collection, query, where, doc, updateDoc, getDocs, runTransaction, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -178,62 +178,72 @@ export default function MySessionsPage() {
   }, [firestore, user, userProfile]);
 
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
-
-  const handleUpdateStatus = async (session: SessionRequest, newStatus: 'completed' | 'cancelled') => {
+  
+  const handleCompleteSession = async (session: SessionRequest) => {
+    if (!session.tutorId) return;
     setUpdatingId(session.id);
 
-    // If completing session, check student balance first
-    if (newStatus === 'completed' && session.tutorId) {
-        // 1. Get student's transactions to calculate balance
-        const transactionsQuery = query(collection(firestore, 'transactions'), where('userId', '==', session.studentId));
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        const studentTransactions = transactionsSnapshot.docs.map(doc => doc.data() as Transaction);
-        const currentBalance = studentTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const studentRef = doc(firestore, 'userProfiles', session.studentId);
+        const tutorRef = doc(firestore, 'userProfiles', session.tutorId!);
+        const sessionRef = doc(firestore, 'sessionRequests', session.id);
 
-        // 2. Check if balance is sufficient
-        if (currentBalance < session.price) {
-            toast({
-                variant: 'destructive',
-                title: 'رصيد غير كافٍ',
-                description: 'رصيد الطالب غير كافٍ لإتمام هذه الجلسة. يجب على الطالب شحن محفظته أولاً.',
-            });
-            setUpdatingId(null);
-            return;
+        const studentSnap = await transaction.get(studentRef);
+
+        if (!studentSnap.exists() || (studentSnap.data().balance ?? 0) < session.price) {
+          throw new Error('رصيد الطالب غير كافٍ لإتمام هذه الجلسة.');
         }
 
-        // 3. If balance is sufficient, create transactions
+        const payoutAmount = session.price * 0.8;
+
+        // 1. Update balances
+        transaction.update(studentRef, { balance: increment(-session.price) });
+        transaction.update(tutorRef, { balance: increment(payoutAmount) });
+
+        // 2. Update session status
+        transaction.update(sessionRef, { status: 'completed' });
+
+        // 3. Create transaction logs
         const transactionsCol = collection(firestore, 'transactions');
-        
-        // Student payment
-        addDocumentNonBlocking(transactionsCol, {
-            userId: session.studentId,
-            type: 'session_payment',
-            amount: -session.price,
-            description: `دفع مقابل جلسة: ${session.title}`,
-            sessionId: session.id,
-            createdAt: new Date().toISOString()
+        const studentTxRef = doc(transactionsCol);
+        const tutorTxRef = doc(transactionsCol);
+
+        transaction.set(studentTxRef, {
+          userId: session.studentId,
+          type: 'session_payment',
+          amount: -session.price,
+          description: `دفع مقابل جلسة: ${session.title}`,
+          sessionId: session.id,
+          createdAt: new Date().toISOString()
         });
 
-        // Tutor payout
-        addDocumentNonBlocking(transactionsCol, {
-            userId: session.tutorId,
-            type: 'session_payout',
-            amount: session.price * 0.8, // 80% commission
-            description: `أرباح جلسة: ${session.title}`,
-            sessionId: session.id,
-            createdAt: new Date().toISOString()
+        transaction.set(tutorTxRef, {
+          userId: session.tutorId!,
+          type: 'session_payout',
+          amount: payoutAmount,
+          description: `أرباح جلسة: ${session.title}`,
+          sessionId: session.id,
+          createdAt: new Date().toISOString()
         });
+      });
+
+      toast({ title: 'تم إنهاء الجلسة بنجاح', description: 'تم تحويل الأموال وتقييد المعاملات.' });
+
+    } catch (e: any) {
+      console.error("Failed to complete session:", e);
+      toast({ variant: 'destructive', title: 'فشل إنهاء الجلسة', description: e.message });
+    } finally {
+      setUpdatingId(null);
     }
+  };
 
-    // This runs for both 'completed' and 'cancelled'
-    const sessionRef = doc(firestore, 'sessionRequests', session.id);
-    updateDocumentNonBlocking(sessionRef, { status: newStatus });
-    
-    toast({
-        title: `تم تحديث حالة الجلسة`,
-        description: `تم ${newStatus === 'completed' ? 'إنهاء' : 'إلغاء'} الجلسة بنجاح.`
-    });
-    setTimeout(() => setUpdatingId(null), 1000);
+  const handleCancelSession = async (session: SessionRequest) => {
+      setUpdatingId(session.id);
+      const sessionRef = doc(firestore, 'sessionRequests', session.id);
+      updateDocumentNonBlocking(sessionRef, { status: 'cancelled' });
+      toast({ title: 'تم إلغاء الجلسة' });
+      setUpdatingId(null);
   };
 
   const upcomingSessions = useMemo(() => sessions?.filter(s => s.status === 'accepted').sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()) || [], [sessions]);
@@ -304,7 +314,7 @@ export default function MySessionsPage() {
                             <Button 
                                 variant="outline"
                                 className="w-full"
-                                onClick={() => handleUpdateStatus(session, 'completed')}
+                                onClick={() => handleCompleteSession(session)}
                                 disabled={updatingId === session.id}
                             >
                                 {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <CheckCircle className="me-2 h-4 w-4" />}
@@ -313,7 +323,7 @@ export default function MySessionsPage() {
                             <Button 
                                 variant="destructive"
                                 size="sm"
-                                onClick={() => handleUpdateStatus(session, 'cancelled')}
+                                onClick={() => handleCancelSession(session)}
                                 disabled={updatingId === session.id}
                             >
                                 <X className="h-4 w-4" />
@@ -326,7 +336,7 @@ export default function MySessionsPage() {
                      <Button 
                         variant="destructive"
                         className="w-full"
-                        onClick={() => handleUpdateStatus(session, 'cancelled')}
+                        onClick={() => handleCancelSession(session)}
                         disabled={updatingId === session.id}
                     >
                         {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <X className="me-2 h-4 w-4" />}

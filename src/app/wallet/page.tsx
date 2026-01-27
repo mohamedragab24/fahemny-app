@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Download, Wallet as WalletIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { Transaction, UserProfile } from '@/lib/types';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -25,20 +25,12 @@ export default function WalletPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const transactionsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
+    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
-  const { data: rawTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  const transactions = useMemo(() => {
-    if (!rawTransactions) return [];
-    return [...rawTransactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [rawTransactions]);
-
-  const currentBalance = useMemo(() => {
-    if (!transactions) return 0;
-    return transactions.reduce((acc, tx) => acc + tx.amount, 0);
-  }, [transactions]);
+  const currentBalance = userProfile?.balance ?? 0;
   
   const getTransactionTypeTranslation = (type: Transaction['type']) => {
     switch(type) {
