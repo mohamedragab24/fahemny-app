@@ -6,15 +6,20 @@ service cloud.firestore {
     // Helper Functions
     // ----------------------------------------------------------------------
 
-    function isSignedIn() {
-      // User must be authenticated and their profile must exist and not be disabled.
-      return request.auth != null && 
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Checks if the user is authenticated and their profile exists and is not disabled.
+    // IMPORTANT: This function performs a 'get' and cannot be used in 'list' rules.
+    function isSignedInAndActive() {
+      return isAuth() &&
              exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.disabled != true;
     }
 
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isAuth() && request.auth.uid == userId;
     }
 
     function getUserData(userId) {
@@ -30,7 +35,7 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
-       return request.auth != null && 
+       return isAuth() && 
               exists(/databases/$(database)/documents/userProfiles/$(userId)) && 
               getUserData(userId).isAdmin == true;
     }
@@ -48,14 +53,14 @@ service cloud.firestore {
     }
 
     match /sessionRequests/{requestId} {
-      allow get: if isSignedIn() && 
+      allow get: if isSignedInAndActive() && 
                     (isOwner(resource.data.studentId) || isOwner(resource.data.tutorId) || isAdmin(request.auth.uid));
       
-      allow list: if isSignedIn();
+      allow list: if isAuth(); // Client queries must be properly constrained (e.g., by userId).
       
-      allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
+      allow create: if isSignedInAndActive() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
       
-      allow update: if isSignedIn() && (
+      allow update: if isSignedInAndActive() && (
         // Tutor accepts a request
         (isTutor(request.auth.uid) && resource.data.status == 'open' && request.resource.data.status == 'accepted') ||
         // Student cancels an open or accepted request
@@ -70,25 +75,25 @@ service cloud.firestore {
         isAdmin(request.auth.uid)
       );
       
-      allow delete: if (isSignedIn() && isOwner(resource.data.studentId) && resource.data.status == 'open') || isAdmin(request.auth.uid);
+      allow delete: if (isSignedInAndActive() && isOwner(resource.data.studentId) && resource.data.status == 'open') || isAdmin(request.auth.uid);
     }
 
     match /transactions/{transactionId} {
-        // Admin can GET any transaction, user can GET their own.
-        allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        // A user can only LIST their own transactions. The admin query also works as it doesn't have a userId constraint.
-        allow list: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-        allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+        allow get: if isSignedInAndActive() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+        // A user can only list their own transactions. The `isOwner` check is valid for list rules.
+        allow list: if isAuth() && isOwner(resource.data.userId);
+        
+        allow create: if isSignedInAndActive() && isOwner(request.resource.data.userId);
         allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      // Admin can GET any notification, user can GET their own.
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
-      // A user can only LIST their own notifications.
-      allow list: if isSignedIn() && isOwner(resource.data.userId);
-      allow update: if isSignedIn() && isOwner(resource.data.userId);
-      allow create: if isSignedIn(); // Should be locked down to backend functions/admins
+      allow get: if isSignedInAndActive() && (isOwner(resource.data.userId) || isAdmin(request.auth.uid));
+      // A user can only list their own notifications. This rule is safe for list operations.
+      allow list: if isAuth() && isOwner(resource.data.userId);
+      
+      allow update: if isSignedInAndActive() && isOwner(resource.data.userId);
+      allow create: if isAuth(); // Should be locked down to backend functions/admins
       allow delete: if isAdmin(request.auth.uid);
     }
   }
