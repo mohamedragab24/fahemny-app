@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
+import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("بريد إلكتروني غير صالح"),
@@ -59,7 +60,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "حدث خطأ!",
-        description: error.message || "فشل تسجيل الدخول.",
+        description: "فشل تسجيل الدخول. تأكد من صحة البريد الإلكتروني وكلمة المرور.",
       });
     }
   }
@@ -106,6 +107,7 @@ export default function LoginPage() {
               )}
             />
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+               {form.formState.isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                {form.formState.isSubmitting ? t.submitting_button : t.submit_button}
             </Button>
           </form>

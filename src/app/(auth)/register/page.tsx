@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
+import { Loader2 } from "lucide-react";
 
 const registerSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
@@ -66,6 +67,8 @@ export default function RegisterPage() {
         createdAt: new Date().toISOString(),
         disabled: false,
         isAdmin: false,
+        // photoURL is not set initially
+        // role is not set initially
       };
 
       const userDocRef = doc(firestore, "userProfiles", user.uid);
@@ -83,7 +86,7 @@ export default function RegisterPage() {
       toast({
         variant: "destructive",
         title: "حدث خطأ!",
-        description: error.message || "لم نتمكن من إنشاء حسابك.",
+        description: error.message || "لم نتمكن من إنشاء حسابك. قد يكون البريد الإلكتروني مستخدماً بالفعل.",
       });
     }
   }
@@ -143,6 +146,7 @@ export default function RegisterPage() {
               )}
             />
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {form.formState.isSubmitting ? t.submitting_button : t.submit_button}
             </Button>
           </form>

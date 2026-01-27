@@ -20,6 +20,7 @@ function getInitials(name?: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
 }
 
+
 export default function AdminUsersPage() {
   const t = ar.admin.users;
   const firestore = useFirestore();
