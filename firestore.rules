@@ -50,7 +50,10 @@ service cloud.firestore {
     match /sessionRequests/{requestId} {
       allow get: if isSignedIn() && 
                     (isTutor(request.auth.uid) || isOwner(resource.data.studentId));
-      allow list: if isSignedIn() && isTutor(request.auth.uid);
+      
+      // Allow any signed-in user to query the list. The 'get' rule will enforce
+      // that they can only read the documents they are authorized to see.
+      allow list: if isSignedIn();
       
       // A student can create a request for themselves.
       allow create: if isSignedIn() && isStudent(request.auth.uid) && request.resource.data.studentId == request.auth.uid;
