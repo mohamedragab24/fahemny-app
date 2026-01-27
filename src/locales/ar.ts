@@ -264,6 +264,7 @@ export default {
             status: 'الحالة',
             is_admin: 'مسؤول؟',
             is_disabled: 'محظور؟',
+            actions: 'إجراءات',
         },
     },
     transactions: {
