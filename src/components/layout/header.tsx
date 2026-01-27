@@ -15,6 +15,7 @@ import {
   Bell,
   BellRing,
   Check,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Sheet,
@@ -35,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserProfile, Notification } from "@/lib/types";
-import { doc, collection, query, where, limit, updateDoc } from "firebase/firestore";
+import { doc, collection, query, where, limit, updateDoc, orderBy } from "firebase/firestore";
 import ar from "@/locales/ar";
 import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -59,21 +60,19 @@ function NotificationsDropdown() {
         );
     }, [firestore, user]);
 
-    const { data: notifications } = useCollection<Notification>(notificationsQuery);
+    const { data: rawNotifications } = useCollection<Notification>(notificationsQuery);
 
     const sortedNotifications = useMemo(() => {
-        return notifications?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
-    }, [notifications]);
+        return rawNotifications?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
+    }, [rawNotifications]);
 
     const unreadCount = useMemo(() => {
-        return notifications?.filter(n => !n.isRead).length || 0;
-    }, [notifications]);
+        return rawNotifications?.filter(n => !n.isRead).length || 0;
+    }, [rawNotifications]);
 
     const handleNotificationClick = (notification: Notification) => {
         if (!notification.isRead) {
             const notifRef = doc(firestore, 'notifications', notification.id);
-            // We use updateDoc directly here instead of the non-blocking version
-            // to ensure the UI can update instantly on navigation.
             updateDoc(notifRef, { isRead: true });
         }
         if (notification.link) {
@@ -82,8 +81,8 @@ function NotificationsDropdown() {
     };
 
     const markAllAsRead = () => {
-        if (!notifications) return;
-        notifications.forEach(notification => {
+        if (!rawNotifications) return;
+        rawNotifications.forEach(notification => {
             if (!notification.isRead) {
                 const notifRef = doc(firestore, 'notifications', notification.id);
                 updateDocumentNonBlocking(notifRef, { isRead: true });
@@ -91,7 +90,7 @@ function NotificationsDropdown() {
         });
     };
     
-    if (!sortedNotifications) return null;
+    if (!user) return null;
 
     return (
         <DropdownMenu>
@@ -236,6 +235,12 @@ export default function Header({ translations: t }: { translations: Translations
                         <User className="mr-2 h-4 w-4" />
                         <span>{t.userMenu.profile}</span>
                     </DropdownMenuItem>
+                     {userProfile.isAdmin && (
+                        <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>{t.links.admin_dashboard}</span>
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => router.push('/sessions')}>
                         <BrainCircuit className="mr-2 h-4 w-4" />
                         <span>{t.links.my_sessions}</span>

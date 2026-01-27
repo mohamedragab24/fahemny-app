@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { LayoutDashboard, ShieldAlert, Users } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, Users, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ar from '@/locales/ar';
 
@@ -26,8 +26,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const navItems: { href: string, label: string, icon: ReactNode }[] = [
-    // Admin pages that list all users/transactions have been temporarily disabled
-    // to fix critical permission errors affecting all users.
+    { href: '/admin/dashboard', label: t.nav.dashboard, icon: <LayoutDashboard className="h-4 w-4" /> },
+    { href: '/admin/users', label: t.nav.users, icon: <Users className="h-4 w-4" /> },
+    { href: '/admin/transactions', label: t.nav.transactions, icon: <CreditCard className="h-4 w-4" /> },
   ];
 
   if (isUserLoading || isProfileLoading) {
@@ -63,7 +64,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <span
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                  pathname === item.href && 'bg-primary/10 text-primary'
+                  pathname.startsWith(item.href) && 'bg-primary/10 text-primary'
                 )}
               >
                 {item.icon}
