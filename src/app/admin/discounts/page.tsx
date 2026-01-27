@@ -31,7 +31,7 @@ const discountFormSchema = z.object({
   usageLimit: z.coerce.number().min(1, 'الحد الأدنى للاستخدام هو 1'),
 });
 
-function AddDiscountDialog({ onCodeAdded }: { onCodeAdded: () => void }) {
+function AddDiscountDialog() {
     const t = ar.admin.discounts.form;
     const [open, setOpen] = useState(false);
     const firestore = useFirestore();
@@ -67,7 +67,6 @@ function AddDiscountDialog({ onCodeAdded }: { onCodeAdded: () => void }) {
             await addDocumentNonBlocking(collection(firestore, 'discountCodes'), newCode, values.code); // Using code as ID
             
             toast({ title: 'تمت الإضافة بنجاح', description: `تم إنشاء كود الخصم ${values.code}.` });
-            onCodeAdded();
             setOpen(false);
             form.reset();
         } catch (error: any) {
@@ -125,7 +124,7 @@ export default function AdminDiscountsPage() {
   const { toast } = useToast();
   
   const codesQuery = useMemoFirebase(() => query(collection(firestore, 'discountCodes'), orderBy('createdAt', 'desc')), [firestore]);
-  const { data: codes, isLoading, forceRefetch } = useCollection<DiscountCode>(codesQuery);
+  const { data: codes, isLoading } = useCollection<DiscountCode>(codesQuery);
 
   const handleToggleStatus = (code: DiscountCode, isActive: boolean) => {
     const codeRef = doc(firestore, 'discountCodes', code.id);
@@ -153,7 +152,7 @@ export default function AdminDiscountsPage() {
             <CardTitle className="font-headline">{t.title}</CardTitle>
             <CardDescription>{t.description}</CardDescription>
         </div>
-        <AddDiscountDialog onCodeAdded={forceRefetch} />
+        <AddDiscountDialog />
       </CardHeader>
       <CardContent>
         {isLoading ? (

@@ -342,6 +342,7 @@ export default {
   notifications: {
     title: 'الإشعارات',
     no_notifications: 'لا توجد إشعارات جديدة.',
+    view_all: 'عرض كل الإشعارات',
     request_accepted_title: 'تم قبول طلبك!',
     request_accepted_message: 'لقد قبل المفهّم "{tutorName}" طلبك لجلسة "{sessionTitle}".',
     new_withdrawal_request_title: 'طلب سحب جديد',
