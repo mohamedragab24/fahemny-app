@@ -140,6 +140,11 @@
           "description": "Timestamp indicating when the request was posted.",
           "format": "date-time"
         },
+        "expiresAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the request will expire if not accepted.",
+          "format": "date-time"
+        },
         "studentRating": {
           "type": "number",
           "description": "Rating (1-5) given by the tutor to the student."

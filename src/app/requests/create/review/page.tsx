@@ -119,11 +119,15 @@ export default function ReviewRequestPage() {
             }
 
             // Create the session request document
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 7); // Expires in 7 days
+
             const newRequest = {
                 ...requestData,
                 studentId: user.uid,
                 status: 'open' as 'open',
                 createdAt: new Date().toISOString(),
+                expiresAt: expiryDate.toISOString(),
                 price: finalPrice, // Use the final price
                 ...(appliedDiscount && { 
                     originalPrice: requestData.price,

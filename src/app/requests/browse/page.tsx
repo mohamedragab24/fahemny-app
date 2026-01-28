@@ -59,6 +59,9 @@ export default function BrowseRequestsPage() {
     if (!requests || !userProfile) return { matchingRequests: [], otherRequests: [] };
     
     const allFiltered = requests.filter(request => {
+      const isExpired = request.expiresAt && new Date(request.expiresAt) < new Date();
+      if (isExpired) return false;
+
       const searchMatch = searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
       const fieldMatch = selectedField === 'all' || request.field === selectedField;
       const priceMatch = request.price >= priceRange[0] && request.price <= priceRange[1];

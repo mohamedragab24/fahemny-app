@@ -275,34 +275,38 @@ export default function MySessionsPage() {
       );
     }
     
-    const statusTranslations: Record<SessionRequest['status'], string> = {
-        open: 'مفتوح',
-        accepted: 'مقبولة',
-        completed: 'مكتملة',
-        cancelled: 'ملغاة',
-    };
-
-    const getStatusVariant = (status: SessionRequest['status']): "default" | "secondary" | "destructive" | "outline" => {
-      switch (status) {
-        case 'accepted': return 'default';
-        case 'completed': return 'outline';
-        case 'cancelled': return 'destructive';
-        default: return 'secondary';
-      }
-    };
-
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
         {sessionList.map((session) => {
             const hasStudentRated = session.tutorRating !== undefined && session.tutorRating !== null;
             const hasTutorRated = session.studentRating !== undefined && session.studentRating !== null;
+            const isExpired = session.status === 'open' && session.expiresAt && new Date(session.expiresAt) < new Date();
+            const currentStatus = isExpired ? 'expired' : session.status;
+            
+            const statusTranslations: Record<SessionRequest['status'] | 'expired', string> = {
+                open: 'مفتوح',
+                accepted: 'مقبولة',
+                completed: 'مكتملة',
+                cancelled: 'ملغاة',
+                expired: 'منتهي الصلاحية'
+            };
+
+            const getStatusVariant = (status: SessionRequest['status'] | 'expired'): "default" | "secondary" | "destructive" | "outline" => {
+              switch (status) {
+                case 'accepted': return 'default';
+                case 'completed': return 'outline';
+                case 'cancelled': return 'destructive';
+                case 'expired': return 'destructive';
+                default: return 'secondary';
+              }
+            };
 
           return (
           <Card key={session.id} className="flex flex-col">
             <CardHeader>
               <div className="flex justify-between items-start">
                   <CardTitle className="text-xl leading-snug">{session.title}</CardTitle>
-                  <Badge variant={getStatusVariant(session.status)} className="shrink-0">{statusTranslations[session.status]}</Badge>
+                  <Badge variant={getStatusVariant(currentStatus)} className="shrink-0">{statusTranslations[currentStatus]}</Badge>
               </div>
               <CardDescription>{session.field}</CardDescription>
             </CardHeader>
@@ -351,7 +355,7 @@ export default function MySessionsPage() {
                         variant="destructive"
                         className="w-full"
                         onClick={() => handleCancelSession(session)}
-                        disabled={updatingId === session.id}
+                        disabled={updatingId === session.id || isExpired}
                     >
                         {updatingId === session.id ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : <X className="me-2 h-4 w-4" />}
                         إلغاء الطلب
