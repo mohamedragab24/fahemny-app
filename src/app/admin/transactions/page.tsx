@@ -1,7 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,8 +26,13 @@ export default function AdminTransactionsPage() {
   const t_wallet = ar.wallet;
   const firestore = useFirestore();
 
-  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'transactions'), orderBy('createdAt', 'desc')), [firestore]);
-  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'transactions')), [firestore]);
+  const { data: rawTransactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const transactions = useMemo(() => {
+    if (!rawTransactions) return [];
+    return rawTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawTransactions]);
 
   const getTransactionTypeTranslation = (type: Transaction['type']) => {
     switch(type) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import ar from '@/locales/ar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Wallet as WalletIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { Transaction, UserProfile } from '@/lib/types';
-import { collection, query, where, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -17,6 +18,7 @@ export default function WalletPage() {
   const t = ar.wallet;
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -25,10 +27,15 @@ export default function WalletPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const transactionsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'transactions'), where('userId', '==', user.uid)) : null),
     [firestore, user]
   );
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const sortedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    return [...transactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [transactions]);
 
   const currentBalance = userProfile?.balance ?? 0;
   
@@ -59,6 +66,11 @@ export default function WalletPage() {
         </div>
     )
   }
+  
+  if (!user) {
+    router.replace('/login');
+    return null;
+  }
 
   return (
     <div className="container py-8">
@@ -81,7 +93,7 @@ export default function WalletPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {transactions && transactions.length > 0 ? (
+                    {sortedTransactions && sortedTransactions.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -92,7 +104,7 @@ export default function WalletPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {transactions.map((tx) => (
+                                {sortedTransactions.map((tx) => (
                                     <TableRow key={tx.id}>
                                         <TableCell className="font-medium">{tx.description}</TableCell>
                                         <TableCell>

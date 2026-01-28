@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ar from '@/locales/ar';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import type { DiscountCode } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -123,8 +123,13 @@ export default function AdminDiscountsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const codesQuery = useMemoFirebase(() => query(collection(firestore, 'discountCodes'), orderBy('createdAt', 'desc')), [firestore]);
-  const { data: codes, isLoading } = useCollection<DiscountCode>(codesQuery);
+  const codesQuery = useMemoFirebase(() => query(collection(firestore, 'discountCodes')), [firestore]);
+  const { data: rawCodes, isLoading } = useCollection<DiscountCode>(codesQuery);
+
+  const codes = useMemo(() => {
+    if (!rawCodes) return [];
+    return rawCodes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawCodes]);
 
   const handleToggleStatus = (code: DiscountCode, isActive: boolean) => {
     const codeRef = doc(firestore, 'discountCodes', code.id);

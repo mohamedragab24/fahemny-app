@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ar from '@/locales/ar';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Notification } from '@/lib/types';
-import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,10 +22,15 @@ export default function NotificationsPage() {
   const router = useRouter();
 
   const notificationsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'notifications'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
+    () => user ? query(collection(firestore, 'notifications'), where('userId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: notifications, isLoading } = useCollection<Notification>(notificationsQuery);
+  const { data: rawNotifications, isLoading } = useCollection<Notification>(notificationsQuery);
+
+  const notifications = useMemo(() => {
+    if (!rawNotifications) return [];
+    return rawNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawNotifications]);
 
   const unreadCount = useMemo(() => notifications?.filter(n => !n.isRead).length || 0, [notifications]);
 
@@ -65,6 +70,11 @@ export default function NotificationsPage() {
         </Card>
       </div>
     );
+  }
+
+  if (!user) {
+    router.replace('/login');
+    return null;
   }
 
   return (

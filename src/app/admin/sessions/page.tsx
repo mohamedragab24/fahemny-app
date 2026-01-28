@@ -1,7 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { SessionRequest } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,8 +16,13 @@ export default function AdminSessionsPage() {
   const t = ar.admin.sessions;
   const firestore = useFirestore();
 
-  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'sessionRequests'), orderBy('createdAt', 'desc')), [firestore]);
-  const { data: sessions, isLoading } = useCollection<SessionRequest>(sessionsQuery);
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'sessionRequests')), [firestore]);
+  const { data: rawSessions, isLoading } = useCollection<SessionRequest>(sessionsQuery);
+
+  const sessions = useMemo(() => {
+    if (!rawSessions) return [];
+    return rawSessions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawSessions]);
 
   const statusTranslations: Record<SessionRequest['status'], string> = {
       open: 'مفتوح',

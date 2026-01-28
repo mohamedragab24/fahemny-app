@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ar from '@/locales/ar';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, runTransaction, increment } from 'firebase/firestore';
+import { collection, query, doc, runTransaction, increment } from 'firebase/firestore';
 import type { WithdrawalRequest, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,8 +25,13 @@ export default function AdminWithdrawalsPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
 
-  const requestsQuery = useMemoFirebase(() => query(collection(firestore, 'withdrawalRequests'), orderBy('createdAt', 'desc')), [firestore]);
-  const { data: requests, isLoading } = useCollection<WithdrawalRequest>(requestsQuery);
+  const requestsQuery = useMemoFirebase(() => query(collection(firestore, 'withdrawalRequests')), [firestore]);
+  const { data: rawRequests, isLoading } = useCollection<WithdrawalRequest>(requestsQuery);
+
+  const requests = useMemo(() => {
+    if (!rawRequests) return [];
+    return rawRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [rawRequests]);
 
   const handleApprove = async (request: WithdrawalRequest) => {
     setLoadingId(request.id);
