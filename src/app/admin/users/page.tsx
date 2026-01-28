@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
+import { useFirestore } from '@/firebase';
+import { collection, doc, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import ar from '@/locales/ar';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import Link from 'next/link';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 
 function getInitials(name?: string) {
@@ -31,15 +33,61 @@ export default function AdminUsersPage() {
   const t = ar.admin.users;
   const firestore = useFirestore();
   const { toast } = useToast();
+  const USERS_PER_PAGE = 20;
   
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const usersQuery = useMemoFirebase(() => collection(firestore, 'userProfiles'), [firestore]);
-  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchUsers = async (loadMore = false) => {
+    if (loadMore && !hasMore) return;
+    
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      let q = query(
+        collection(firestore, 'userProfiles'),
+        orderBy('createdAt', 'desc'),
+        limit(USERS_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newUsers = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+      
+      setUsers(prev => loadMore ? [...prev, ...newUsers] : newUsers);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < USERS_PER_PAGE) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({ variant: 'destructive', title: 'فشل تحميل المستخدمين' });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers(false);
+  }, [firestore]);
 
   const filteredUsers = useMemo(() => {
-    if (!users) return [];
     return users
       .filter(user => {
         const searchMatch = searchTerm === '' ||
@@ -49,26 +97,27 @@ export default function AdminUsersPage() {
         const roleMatch = roleFilter === 'all' || user.role === roleFilter || (roleFilter === 'none' && !user.role);
         
         return searchMatch && roleMatch;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      });
   }, [users, searchTerm, roleFilter]);
 
 
-  const handleToggleUserStatus = (user: UserProfile, isDisabled: boolean) => {
-    const userRef = doc(firestore, 'userProfiles', user.id);
+  const handleToggleUserStatus = (userId: string, isDisabled: boolean, userName: string) => {
+    const userRef = doc(firestore, 'userProfiles', userId);
     updateDocumentNonBlocking(userRef, { disabled: isDisabled });
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, disabled: isDisabled } : u));
     toast({
         title: `تم ${isDisabled ? 'حظر' : 'تفعيل'} المستخدم`,
-        description: `تم تحديث حالة المستخدم ${user.name}.`,
+        description: `تم تحديث حالة المستخدم ${userName}.`,
     });
   };
   
-  const handleToggleAdminStatus = (user: UserProfile, isAdmin: boolean) => {
-    const userRef = doc(firestore, 'userProfiles', user.id);
+  const handleToggleAdminStatus = (userId: string, isAdmin: boolean, userName: string) => {
+    const userRef = doc(firestore, 'userProfiles', userId);
     updateDocumentNonBlocking(userRef, { isAdmin: isAdmin });
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, isAdmin } : u));
     toast({
         title: `تم تحديث صلاحيات المسؤول`,
-        description: `تم ${isAdmin ? 'منح' : 'إزالة'} صلاحيات المسؤول للمستخدم ${user.name}.`,
+        description: `تم ${isAdmin ? 'منح' : 'إزالة'} صلاحيات المسؤول للمستخدم ${userName}.`,
     });
   };
 
@@ -101,7 +150,7 @@ export default function AdminUsersPage() {
 
         {isLoading ? (
             <div className="space-y-2">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
         ) : (
           <Table>
@@ -116,7 +165,7 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers && filteredUsers.length > 0 ? filteredUsers.map((user) => (
+              {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <Link href={`/users/${user.id}`} className="group/userlink">
@@ -144,14 +193,14 @@ export default function AdminUsersPage() {
                    <TableCell>
                      <Switch
                         checked={!!user.isAdmin}
-                        onCheckedChange={(isAdmin) => handleToggleAdminStatus(user, isAdmin)}
+                        onCheckedChange={(isAdmin) => handleToggleAdminStatus(user.id, isAdmin, user.name)}
                         aria-label="Toggle Admin"
                     />
                   </TableCell>
                   <TableCell className="text-center">
                     <Switch
                         checked={!!user.disabled}
-                        onCheckedChange={(isDisabled) => handleToggleUserStatus(user, isDisabled)}
+                        onCheckedChange={(isDisabled) => handleToggleUserStatus(user.id, isDisabled, user.name)}
                         aria-label="Toggle Disabled"
                     />
                   </TableCell>
@@ -165,6 +214,14 @@ export default function AdminUsersPage() {
           </Table>
         )}
       </CardContent>
+      {hasMore && (
+        <CardFooter className="justify-center border-t pt-6">
+            <Button onClick={() => fetchUsers(true)} disabled={isLoadingMore}>
+                {isLoadingMore ? <Loader2 className="me-2 h-4 w-4 animate-spin"/> : null}
+                تحميل المزيد
+            </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useDoc } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { UserInfoLink } from '@/components/UserInfoLink';
+import { useUser, useMemoFirebase } from '@/firebase';
 
 export default function BrowseRequestsPage() {
   const t = ar.header.links;
@@ -31,23 +32,83 @@ export default function BrowseRequestsPage() {
   
   const t_notifications = ar.notifications;
 
-  const userProfileRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'userProfiles', user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const requestsQuery = useMemoFirebase(
-    () => {
-      if (firestore && userProfile?.role === 'tutor') {
-        return query(collection(firestore, 'sessionRequests'), where('status', '==', 'open'));
-      }
-      return null;
-    },
-    [firestore, userProfile]
-  );
+  const [requests, setRequests] = useState<SessionRequest[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const REQUESTS_PER_PAGE = 15;
 
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<SessionRequest>(requestsQuery);
+  const fetchRequests = async (loadMore = false) => {
+    if (loadMore && !hasMore) return;
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      const queries = [
+        where('status', '==', 'open'),
+        orderBy('createdAt', 'desc')
+      ];
+
+      if (selectedField !== 'all') {
+        queries.push(where('field', '==', selectedField));
+      }
+      if (priceRange[1] < 1000) {
+        queries.push(where('price', '<=', priceRange[1]));
+      }
+       if (priceRange[0] > 0) {
+        queries.push(where('price', '>=', priceRange[0]));
+      }
+
+      let q = query(
+        collection(firestore, 'sessionRequests'),
+        ...queries,
+        limit(REQUESTS_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newRequests = documentSnapshots.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as SessionRequest))
+        .filter(request => {
+             const isExpired = request.expiresAt && new Date(request.expiresAt) < new Date();
+             return !isExpired;
+        });
+
+      setRequests(prev => loadMore ? [...prev, ...newRequests] : newRequests);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < REQUESTS_PER_PAGE) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+    } catch (e: any) {
+      console.error("Failed to fetch requests", e);
+      toast({ variant: 'destructive', title: 'فشل تحميل الطلبات', description: e.message.includes("indexes") ? "تحتاج قاعدة البيانات إلى فهرس جديد لهذا الفلتر." : e.message });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+  
+  // Re-fetch when filters change
+  useEffect(() => {
+    // Reset and fetch
+    setRequests([]);
+    setLastVisible(null);
+    setHasMore(true);
+    fetchRequests(false);
+  }, [selectedField, priceRange]);
+
 
   const availableFields = useMemo(() => {
     if (!requests) return [];
@@ -58,25 +119,20 @@ export default function BrowseRequestsPage() {
   const { matchingRequests, otherRequests } = useMemo(() => {
     if (!requests || !userProfile) return { matchingRequests: [], otherRequests: [] };
     
-    const allFiltered = requests.filter(request => {
-      const isExpired = request.expiresAt && new Date(request.expiresAt) < new Date();
-      if (isExpired) return false;
-
-      const searchMatch = searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const fieldMatch = selectedField === 'all' || request.field === selectedField;
-      const priceMatch = request.price >= priceRange[0] && request.price <= priceRange[1];
-      return searchMatch && fieldMatch && priceMatch;
+    // Client-side search on the already fetched data
+    const searched = requests.filter(request => {
+      return searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     const tutorSpecialties = new Set(userProfile.specialties || []);
     if (tutorSpecialties.size === 0) {
-        return { matchingRequests: [], otherRequests: allFiltered };
+        return { matchingRequests: [], otherRequests: searched };
     }
 
     const matching: SessionRequest[] = [];
     const others: SessionRequest[] = [];
 
-    allFiltered.forEach(request => {
+    searched.forEach(request => {
         if (tutorSpecialties.has(request.field)) {
             matching.push(request);
         } else {
@@ -85,8 +141,7 @@ export default function BrowseRequestsPage() {
     });
     return { matchingRequests: matching, otherRequests: others };
 
-  }, [requests, searchTerm, selectedField, priceRange, userProfile]);
-
+  }, [requests, searchTerm, userProfile]);
 
   const handleAccept = async (request: SessionRequest) => {
     if (!user || !userProfile) {
@@ -98,7 +153,6 @@ export default function BrowseRequestsPage() {
 
     try {
       const requestRef = doc(firestore, 'sessionRequests', request.id);
-      
       const meetingLink = `https://meet.jit.si/Fahemny-Session-${request.id}`;
       
       updateDocumentNonBlocking(requestRef, {
@@ -107,8 +161,7 @@ export default function BrowseRequestsPage() {
         meetingLink: meetingLink,
       });
 
-      const notificationsCol = collection(firestore, 'notifications');
-      addDocumentNonBlocking(notificationsCol, {
+      addDocumentNonBlocking(collection(firestore, 'notifications'), {
         userId: request.studentId,
         title: t_notifications.request_accepted_title,
         message: t_notifications.request_accepted_message
@@ -139,7 +192,7 @@ export default function BrowseRequestsPage() {
     }
   };
   
-  const isLoading = isLoadingRequests || isUserLoading || isLoadingProfile;
+  const isPageLoading = isUserLoading || isLoadingProfile;
 
   const renderRequestCard = (request: SessionRequest) => (
     <Card key={request.id} className="flex flex-col">
@@ -174,7 +227,7 @@ export default function BrowseRequestsPage() {
     </Card>
   );
   
-  if (isLoading) {
+  if (isPageLoading) {
     return (
       <div className="container py-8">
         <h1 className="text-3xl font-bold font-headline mb-6">{t.browse_requests}</h1>
@@ -243,8 +296,10 @@ export default function BrowseRequestsPage() {
           />
         </div>
       </div>
+      
+       {isLoading && <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /></div>}
 
-       {!isLoading && matchingRequests.length === 0 && otherRequests.length === 0 ? (
+       {!isLoading && requests.length === 0 ? (
         <div className="border rounded-lg p-8 text-center bg-secondary/50 mt-8">
             <p className="text-muted-foreground">لا توجد طلبات شرح متاحة تطابق معايير البحث. حاول مرة أخرى لاحقًا.</p>
         </div>
@@ -268,6 +323,14 @@ export default function BrowseRequestsPage() {
                 {otherRequests.map(renderRequestCard)}
                 </div>
             </section>
+            )}
+             {hasMore && (
+                <div className="mt-8 text-center">
+                    <Button onClick={() => fetchRequests(true)} disabled={isLoadingMore}>
+                        {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                        تحميل المزيد
+                    </Button>
+                </div>
             )}
         </>
       )}

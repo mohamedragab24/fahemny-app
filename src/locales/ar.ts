@@ -255,8 +255,11 @@ export default {
     dashboard: {
         title: 'لوحة المعلومات',
         total_users: 'إجمالي المستخدمين',
+        new_users_30_days: 'مستخدمون جدد (30 يوم)',
         total_sessions: 'إجمالي الجلسات',
+        new_sessions_30_days: 'جلسات جديدة (30 يوم)',
         platform_revenue: 'أرباح المنصة',
+        revenue_30_days: 'الأرباح (30 يوم)',
         user_growth: 'نمو المستخدمين',
         session_status_distribution: 'توزيع حالات الجلسات',
     },

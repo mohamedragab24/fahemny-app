@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, runTransaction, increment } from 'firebase/firestore';
-import type { WithdrawalRequest, UserProfile } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFirestore } from '@/firebase';
+import { collection, query, doc, runTransaction, increment, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import type { WithdrawalRequest } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -21,17 +21,57 @@ export default function AdminWithdrawalsPage() {
   const t = ar.admin.withdrawals;
   const firestore = useFirestore();
   const { toast } = useToast();
+  const REQUESTS_PER_PAGE = 20;
   
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
 
-  const requestsQuery = useMemoFirebase(() => query(collection(firestore, 'withdrawalRequests')), [firestore]);
-  const { data: rawRequests, isLoading } = useCollection<WithdrawalRequest>(requestsQuery);
+  const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const requests = useMemo(() => {
-    if (!rawRequests) return [];
-    return rawRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [rawRequests]);
+  const fetchRequests = async (loadMore = false) => {
+    if (!hasMore && loadMore) return;
+    
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      let q = query(
+        collection(firestore, 'withdrawalRequests'),
+        orderBy('createdAt', 'desc'),
+        limit(REQUESTS_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newRequests = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+      
+      setRequests(prev => loadMore ? [...prev, ...newRequests] : newRequests);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < REQUESTS_PER_PAGE) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching withdrawal requests:", error);
+      toast({ variant: 'destructive', title: 'فشل تحميل الطلبات' });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   const handleApprove = async (request: WithdrawalRequest) => {
     setLoadingId(request.id);
@@ -45,16 +85,12 @@ export default function AdminWithdrawalsPage() {
               throw new Error('رصيد المستخدم غير كافٍ لإتمام عملية السحب.');
             }
 
-            // 1. Update user balance
             transaction.update(userProfileRef, { balance: increment(-request.amount) });
-
-            // 2. Update request status
             const requestRef = doc(firestore, 'withdrawalRequests', request.id);
             transaction.update(requestRef, { status: 'approved' });
 
-            // 3. Create a withdrawal transaction log
             const transactionCol = collection(firestore, 'transactions');
-            const newTransactionRef = doc(transactionCol); // auto-generate ID
+            const newTransactionRef = doc(transactionCol);
             transaction.set(newTransactionRef, {
                 userId: request.userId,
                 type: 'withdrawal',
@@ -64,9 +100,7 @@ export default function AdminWithdrawalsPage() {
             });
         });
 
-        // 4. Notify user (outside transaction)
-        const notificationCol = collection(firestore, 'notifications');
-        addDocumentNonBlocking(notificationCol, {
+        addDocumentNonBlocking(collection(firestore, 'notifications'), {
             userId: request.userId,
             title: ar.notifications.withdrawal_approved_title,
             message: ar.notifications.withdrawal_approved_message.replace('{amount}', request.amount.toString()),
@@ -76,6 +110,7 @@ export default function AdminWithdrawalsPage() {
         });
 
         toast({ title: 'تمت الموافقة بنجاح' });
+        setRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'approved' } : r));
 
     } catch (e: any) {
         console.error("Approval failed:", e);
@@ -88,13 +123,10 @@ export default function AdminWithdrawalsPage() {
   const handleReject = (request: WithdrawalRequest) => {
     setLoadingId(request.id);
     
-    // 1. Update request status with admin notes
     const requestRef = doc(firestore, 'withdrawalRequests', request.id);
     updateDocumentNonBlocking(requestRef, { status: 'rejected', adminNotes: rejectionNotes });
 
-    // 2. Notify user
-    const notificationCol = collection(firestore, 'notifications');
-    addDocumentNonBlocking(notificationCol, {
+    addDocumentNonBlocking(collection(firestore, 'notifications'), {
         userId: request.userId,
         title: ar.notifications.withdrawal_rejected_title,
         message: ar.notifications.withdrawal_rejected_message.replace('{reason}', rejectionNotes || 'لا يوجد سبب'),
@@ -104,6 +136,7 @@ export default function AdminWithdrawalsPage() {
     });
 
     toast({ title: 'تم الرفض بنجاح' });
+    setRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'rejected', adminNotes: rejectionNotes } : r));
     setLoadingId(null);
     setRejectionNotes('');
   };
@@ -146,7 +179,7 @@ export default function AdminWithdrawalsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests && requests.length > 0 ? requests.map((request) => (
+              {requests.length > 0 ? requests.map((request) => (
                 <TableRow key={request.id}>
                   <TableCell>
                     <div className="font-medium">{request.userName}</div>
@@ -212,13 +245,21 @@ export default function AdminWithdrawalsPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center">{t.no_requests}</TableCell>
+                    <TableCell colSpan={6} className="text-center h-24">{t.no_requests}</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         )}
       </CardContent>
+       {hasMore && (
+        <CardFooter className="justify-center">
+          <Button onClick={() => fetchRequests(true)} disabled={isLoadingMore}>
+            {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            تحميل المزيد
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

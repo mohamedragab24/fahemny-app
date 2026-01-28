@@ -1,16 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useFirestore } from '@/firebase';
+import { collection, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import ar from '@/locales/ar';
 import { UserInfoLink } from '@/components/UserInfoLink';
-
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 function UserInfo({ userId }: { userId: string }) {
     return (
@@ -25,14 +27,55 @@ export default function AdminTransactionsPage() {
   const t = ar.admin.transactions;
   const t_wallet = ar.wallet;
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const TRANSACTIONS_PER_PAGE = 25;
 
-  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'transactions')), [firestore]);
-  const { data: rawTransactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const transactions = useMemo(() => {
-    if (!rawTransactions) return [];
-    return rawTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [rawTransactions]);
+  const fetchTransactions = async (loadMore = false) => {
+    if (!hasMore && loadMore) return;
+
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      let q = query(
+        collection(firestore, 'transactions'),
+        orderBy('createdAt', 'desc'),
+        limit(TRANSACTIONS_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newTransactions = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      
+      setTransactions(prev => loadMore ? [...prev, ...newTransactions] : newTransactions);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < TRANSACTIONS_PER_PAGE) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      toast({ variant: 'destructive', title: 'فشل تحميل المعاملات' });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
   const getTransactionTypeTranslation = (type: Transaction['type']) => {
     switch(type) {
@@ -67,7 +110,7 @@ export default function AdminTransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions && transactions.length > 0 ? transactions.map((tx) => (
+              {transactions.length > 0 ? transactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>
                     <UserInfo userId={tx.userId} />
@@ -83,13 +126,21 @@ export default function AdminTransactionsPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center">{t.no_transactions}</TableCell>
+                    <TableCell colSpan={5} className="text-center h-24">{t.no_transactions}</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         )}
       </CardContent>
+      {hasMore && (
+        <CardFooter className="justify-center">
+          <Button onClick={() => fetchTransactions(true)} disabled={isLoadingMore}>
+            {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            تحميل المزيد
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

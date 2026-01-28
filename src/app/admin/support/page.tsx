@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, doc, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { ContactMessage } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,24 +13,67 @@ import { Button } from '@/components/ui/button';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye } from 'lucide-react';
+import { Eye, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSupportPage() {
   const t = ar.admin.support;
   const firestore = useFirestore();
-  
-  const messagesQuery = useMemoFirebase(() => query(collection(firestore, 'contactMessages')), [firestore]);
-  const { data: rawMessages, isLoading } = useCollection<ContactMessage>(messagesQuery);
+  const { toast } = useToast();
+  const MESSAGES_PER_PAGE = 20;
 
-  const messages = useMemo(() => {
-    if (!rawMessages) return [];
-    return rawMessages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [rawMessages]);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchMessages = async (loadMore = false) => {
+    if (!hasMore && loadMore) return;
+    
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      let q = query(
+        collection(firestore, 'contactMessages'),
+        orderBy('createdAt', 'desc'),
+        limit(MESSAGES_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newMessages = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContactMessage));
+      
+      setMessages(prev => loadMore ? [...prev, ...newMessages] : newMessages);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < MESSAGES_PER_PAGE) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      toast({ variant: 'destructive', title: 'فشل تحميل الرسائل' });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
 
   const handleStatusChange = (messageId: string, status: ContactMessage['status']) => {
     const messageRef = doc(firestore, 'contactMessages', messageId);
     updateDocumentNonBlocking(messageRef, { status });
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, status } : m));
   };
 
   const getStatusVariant = (status: ContactMessage['status']): "default" | "secondary" | "outline" => {
@@ -71,7 +114,7 @@ export default function AdminSupportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {messages && messages.length > 0 ? messages.map((message) => (
+              {messages.length > 0 ? messages.map((message) => (
                 <TableRow key={message.id}>
                   <TableCell>
                     <div className="font-medium">{message.name}</div>
@@ -118,6 +161,14 @@ export default function AdminSupportPage() {
           </Table>
         )}
       </CardContent>
+       {hasMore && (
+        <CardFooter className="justify-center">
+          <Button onClick={() => fetchMessages(true)} disabled={isLoadingMore}>
+            {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            تحميل المزيد
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, doc, deleteDoc, getDoc, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { DiscountCode } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ const discountFormSchema = z.object({
   usageLimit: z.coerce.number().min(1, 'الحد الأدنى للاستخدام هو 1'),
 });
 
-function AddDiscountDialog() {
+function AddDiscountDialog({ onCodeAdded }: { onCodeAdded: () => void }) {
     const t = ar.admin.discounts.form;
     const [open, setOpen] = useState(false);
     const firestore = useFirestore();
@@ -49,7 +49,6 @@ function AddDiscountDialog() {
 
     const onSubmit = async (values: z.infer<typeof discountFormSchema>) => {
         
-        // Check if code already exists
         const codeRef = doc(firestore, 'discountCodes', values.code);
         const codeSnap = await getDoc(codeRef);
         if (codeSnap.exists()) {
@@ -64,11 +63,12 @@ function AddDiscountDialog() {
                 isActive: true,
                 createdAt: new Date().toISOString(),
             };
-            await addDocumentNonBlocking(collection(firestore, 'discountCodes'), newCode, values.code); // Using code as ID
+            await addDocumentNonBlocking(collection(firestore, 'discountCodes'), newCode, values.code);
             
             toast({ title: 'تمت الإضافة بنجاح', description: `تم إنشاء كود الخصم ${values.code}.` });
             setOpen(false);
             form.reset();
+            onCodeAdded();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'فشلت الإضافة', description: error.message });
         }
@@ -122,29 +122,70 @@ export default function AdminDiscountsPage() {
   const t = ar.admin.discounts;
   const firestore = useFirestore();
   const { toast } = useToast();
-  
-  const codesQuery = useMemoFirebase(() => query(collection(firestore, 'discountCodes')), [firestore]);
-  const { data: rawCodes, isLoading } = useCollection<DiscountCode>(codesQuery);
+  const CODES_PER_PAGE = 20;
 
-  const codes = useMemo(() => {
-    if (!rawCodes) return [];
-    return rawCodes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [rawCodes]);
+  const [codes, setCodes] = useState<DiscountCode[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const handleToggleStatus = (code: DiscountCode, isActive: boolean) => {
-    const codeRef = doc(firestore, 'discountCodes', code.id);
+  const fetchCodes = async (loadMore = false) => {
+    if (!hasMore && loadMore) return;
+    
+    try {
+      if (loadMore) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      let q = query(
+        collection(firestore, 'discountCodes'),
+        orderBy('createdAt', 'desc'),
+        limit(CODES_PER_PAGE)
+      );
+
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
+      }
+
+      const documentSnapshots = await getDocs(q);
+      const newCodes = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as DiscountCode));
+      
+      setCodes(prev => loadMore ? [...prev, ...newCodes] : newCodes);
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc);
+
+      if (documentSnapshots.docs.length < CODES_PER_PAGE) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching discount codes:", error);
+      toast({ variant: 'destructive', title: 'فشل تحميل أكواد الخصم' });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCodes();
+  }, []);
+
+  const handleToggleStatus = (codeId: string, isActive: boolean) => {
+    const codeRef = doc(firestore, 'discountCodes', codeId);
     updateDocumentNonBlocking(codeRef, { isActive });
+    setCodes(prev => prev.map(c => c.id === codeId ? { ...c, isActive } : c));
     toast({
         title: `تم تحديث الحالة`,
-        description: `تم ${isActive ? 'تفعيل' : 'إلغاء تفعيل'} الكود ${code.code}.`,
+        description: `تم ${isActive ? 'تفعيل' : 'إلغاء تفعيل'} الكود.`,
     });
   };
 
   const handleDeleteCode = async (codeId: string) => {
     try {
         await deleteDoc(doc(firestore, 'discountCodes', codeId));
+        setCodes(prev => prev.filter(c => c.id !== codeId));
         toast({ title: 'تم الحذف بنجاح' });
-        // The real-time listener will update the UI automatically.
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'فشل الحذف', description: error.message });
     }
@@ -157,7 +198,7 @@ export default function AdminDiscountsPage() {
             <CardTitle className="font-headline">{t.title}</CardTitle>
             <CardDescription>{t.description}</CardDescription>
         </div>
-        <AddDiscountDialog />
+        <AddDiscountDialog onCodeAdded={() => fetchCodes()} />
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -177,7 +218,7 @@ export default function AdminDiscountsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {codes && codes.length > 0 ? codes.map((code) => (
+              {codes.length > 0 ? codes.map((code) => (
                 <TableRow key={code.id}>
                   <TableCell className="font-mono font-semibold">{code.code}</TableCell>
                   <TableCell>
@@ -190,7 +231,7 @@ export default function AdminDiscountsPage() {
                   <TableCell>
                      <Switch
                         checked={code.isActive}
-                        onCheckedChange={(isActive) => handleToggleStatus(code, isActive)}
+                        onCheckedChange={(isActive) => handleToggleStatus(code.id, isActive)}
                         aria-label="Toggle Status"
                     />
                     <span className="ms-2 text-xs text-muted-foreground">{code.isActive ? t.active : t.inactive}</span>
@@ -222,6 +263,14 @@ export default function AdminDiscountsPage() {
           </Table>
         )}
       </CardContent>
+       {hasMore && (
+        <CardFooter className="justify-center">
+          <Button onClick={() => fetchCodes(true)} disabled={isLoadingMore}>
+            {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            تحميل المزيد
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }
