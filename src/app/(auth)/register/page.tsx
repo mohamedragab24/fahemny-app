@@ -84,10 +84,14 @@ export default function RegisterPage() {
 
     } catch (error: any) {
       console.error("Registration failed:", error);
+      let description = "لم نتمكن من إنشاء حسابك. الرجاء المحاولة مرة أخرى.";
+      if (error.code === 'auth/email-already-in-use') {
+          description = "هذا البريد الإلكتروني مستخدم بالفعل. هل تريد تسجيل الدخول بدلاً من ذلك؟";
+      }
       toast({
         variant: "destructive",
-        title: "حدث خطأ!",
-        description: error.message || "لم نتمكن من إنشاء حسابك. قد يكون البريد الإلكتروني مستخدماً بالفعل.",
+        title: "فشل إنشاء الحساب",
+        description: description,
       });
     }
   }
