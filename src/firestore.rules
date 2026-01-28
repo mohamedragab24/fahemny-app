@@ -74,5 +74,12 @@ service cloud.firestore {
       allow create, update, delete: if isAuth() && isAdmin();
       allow get, list: if isAuth();
     }
+
+    // Contact Messages
+    match /contactMessages/{messageId} {
+      allow create: if true; // Anyone can send a message
+      allow list, get, update: if isAuth() && isAdmin();
+      allow delete: if isAuth() && isAdmin();
+    }
   }
 }
