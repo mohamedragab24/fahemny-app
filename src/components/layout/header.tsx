@@ -16,6 +16,7 @@ import {
   BellRing,
   Check,
   LayoutDashboard,
+  Users,
 } from "lucide-react";
 import {
   Sheet,
@@ -178,6 +179,7 @@ export default function Header({ translations: t }: { translations: Translations
       { href: "/requests/create", label: t.links.create_request, icon: <PlusCircle className="h-5 w-5" />, role: 'student' },
       { href: "/sessions", label: t.links.my_sessions, icon: <BrainCircuit className="h-5 w-5" /> },
       { href: "/wallet", label: t.links.wallet, icon: <Wallet className="h-5 w-5" /> },
+      { href: "/referrals", label: t.links.referrals, icon: <Users className="h-5 w-5" /> },
       { href: "/notifications", label: ar.notifications.title, icon: <Bell className="h-5 w-5" /> },
       { href: "/support", label: t.links.support, icon: <LifeBuoy className="h-5 w-5" /> },
   ];
@@ -256,6 +258,10 @@ export default function Header({ translations: t }: { translations: Translations
                     <DropdownMenuItem onClick={() => router.push('/wallet')}>
                         <Wallet className="mr-2 h-4 w-4" />
                         <span>{t.links.wallet}</span>
+                    </DropdownMenuItem>
+                     <DropdownMenuItem onClick={() => router.push('/referrals')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>{t.links.referrals}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push('/notifications')}>
                         <Bell className="mr-2 h-4 w-4" />

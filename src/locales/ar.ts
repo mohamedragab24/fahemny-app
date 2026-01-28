@@ -8,6 +8,7 @@ export default {
       wallet: 'المحفظة',
       support: 'الدعم',
       admin_dashboard: 'لوحة التحكم',
+      referrals: 'دعوة الأصدقاء',
     },
     auth: {
       login: 'تسجيل الدخول',
@@ -269,6 +270,7 @@ export default {
             status: 'الحالة',
             is_admin: 'مسؤول؟',
             is_disabled: 'محظور؟',
+            referrals: 'الإحالات',
         },
     },
     transactions: {
@@ -418,5 +420,15 @@ export default {
     invalid_code_toast: 'كود الخصم غير صالح أو انتهى استخدامه.',
     discount_label: 'الخصم:',
     final_price_label: 'السعر النهائي:',
-  }
+  },
+  referrals: {
+    title: 'دعوة الأصدقاء',
+    description: 'ادعُ أصدقاءك للانضمام إلى "فَهِّمْني". عندما يسجلون باستخدام رابط الإحالة الخاص بك، سيزداد عدد إحالاتك.',
+    your_link: 'رابط الإحالة الخاص بك',
+    copy_link: 'نسخ الرابط',
+    copied: 'تم النسخ!',
+    referral_count_title: 'عدد الإحالات الناجحة',
+    users: 'مستخدمين',
+    no_referrals: 'لم تقم بأي إحالات ناجحة بعد.',
+  },
 } as const;

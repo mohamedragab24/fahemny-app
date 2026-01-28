@@ -50,13 +50,26 @@
           "items": {
             "type": "string"
           }
+        },
+        "referralCode": {
+          "type": "string",
+          "description": "The user's unique referral code, which is the same as their user ID."
+        },
+        "referredBy": {
+          "type": "string",
+          "description": "The user ID of the person who referred this user, if any."
+        },
+        "referralCount": {
+          "type": "number",
+          "description": "The total number of users this user has successfully referred."
         }
       },
       "required": [
         "id",
         "name",
         "email",
-        "createdAt"
+        "createdAt",
+        "referralCode"
       ]
     },
     "SessionRequest": {

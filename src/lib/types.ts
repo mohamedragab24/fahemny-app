@@ -11,6 +11,9 @@ export type UserProfile = {
   disabled?: boolean;
   createdAt: string;
   specialties?: string[];
+  referralCode?: string;
+  referredBy?: string;
+  referralCount?: number;
 };
 
 export type SessionRequest = {

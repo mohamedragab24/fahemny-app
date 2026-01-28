@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, runTransaction, increment } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
 import { Loader2 } from "lucide-react";
+import type { UserProfile } from "@/lib/types";
 
 const registerSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
@@ -38,6 +39,7 @@ const registerSchema = z.object({
 export default function RegisterPage() {
   const t = ar.register;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -52,6 +54,8 @@ export default function RegisterPage() {
   });
 
   async function onSubmit(values: z.infer<typeof registerSchema>) {
+    const referralCode = searchParams.get('ref');
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -60,20 +64,33 @@ export default function RegisterPage() {
       );
       const user = userCredential.user;
 
-      const userProfile = {
-        id: user.uid,
-        name: values.name,
-        email: values.email,
-        createdAt: new Date().toISOString(),
-        disabled: false,
-        isAdmin: false,
-        balance: 0,
-        // photoURL is not set initially
-        // role is not set initially
-      };
+      await runTransaction(firestore, async (transaction) => {
+        const newUserProfileRef = doc(firestore, "userProfiles", user.uid);
 
-      const userDocRef = doc(firestore, "userProfiles", user.uid);
-      await setDoc(userDocRef, userProfile);
+        const newUserProfileData: Partial<UserProfile> = {
+          id: user.uid,
+          name: values.name,
+          email: values.email,
+          createdAt: new Date().toISOString(),
+          disabled: false,
+          isAdmin: false,
+          balance: 0,
+          referralCode: user.uid, // User's own ID is their referral code
+          referralCount: 0,
+        };
+
+        if (referralCode) {
+          const referrerRef = doc(firestore, "userProfiles", referralCode);
+          const referrerSnap = await transaction.get(referrerRef);
+
+          if (referrerSnap.exists()) {
+            newUserProfileData.referredBy = referralCode;
+            transaction.update(referrerRef, { referralCount: increment(1) });
+          }
+        }
+        
+        transaction.set(newUserProfileRef, newUserProfileData);
+      });
 
       toast({
         title: "تم إنشاء الحساب!",

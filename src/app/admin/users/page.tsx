@@ -71,6 +71,7 @@ export default function AdminUsersPage() {
                 <TableHead>{t.table.role}</TableHead>
                 <TableHead>الرصيد</TableHead>
                 <TableHead>{t.table.joined_at}</TableHead>
+                <TableHead>{t.table.referrals}</TableHead>
                 <TableHead>{t.table.is_admin}</TableHead>
                 <TableHead className="text-center">{t.table.is_disabled}</TableHead>
               </TableRow>
@@ -101,6 +102,7 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell className="font-mono">{(user.balance ?? 0).toFixed(2)}</TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString('ar-EG')}</TableCell>
+                  <TableCell className="font-mono font-medium text-center">{user.referralCount || 0}</TableCell>
                    <TableCell>
                      <Switch
                         checked={!!user.isAdmin}
@@ -118,7 +120,7 @@ export default function AdminUsersPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center">{t.no_users}</TableCell>
+                    <TableCell colSpan={7} className="text-center">{t.no_users}</TableCell>
                 </TableRow>
               )}
             </TableBody>
