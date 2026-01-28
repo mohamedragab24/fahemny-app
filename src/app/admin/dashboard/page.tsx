@@ -43,6 +43,21 @@ export default function AdminDashboardPage() {
       .filter(tx => tx.type === 'session_payment')
       .reduce((acc, tx) => acc + Math.abs(tx.amount) * 0.20, 0);
 
+    // Average Sessions Per Day
+    let averageSessionsPerDay = 0;
+    if (sessions.length > 0) {
+        const firstSessionDate = sessions.reduce((earliest, session) => {
+            const sessionDate = new Date(session.createdAt);
+            return sessionDate < earliest ? sessionDate : earliest;
+        }, new Date());
+
+        const today = new Date();
+        const timeDiff = today.getTime() - firstSessionDate.getTime();
+        const daysDiff = Math.max(1, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+        
+        averageSessionsPerDay = sessions.length / daysDiff;
+    }
+
     // Session Status Distribution
     const statusCounts = sessions.reduce((acc, session) => {
       acc[session.status] = (acc[session.status] || 0) + 1;
@@ -69,7 +84,7 @@ export default function AdminDashboardPage() {
 
 
     return {
-      stats: { totalUsers, totalTutors, totalStudents, totalSessions, platformRevenue },
+      stats: { totalUsers, totalTutors, totalStudents, totalSessions, platformRevenue, averageSessionsPerDay },
       sessionStatusData,
       userGrowthData,
     };
@@ -130,8 +145,8 @@ export default function AdminDashboardPage() {
                     <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">...</div>
-                    <p className="text-xs text-muted-foreground">قيد الحساب</p>
+                    <div className="text-2xl font-bold">{stats.averageSessionsPerDay?.toFixed(1) || '0.0'}</div>
+                    <p className="text-xs text-muted-foreground">على مدار عمر المنصة</p>
                 </CardContent>
             </Card>
         </div>
