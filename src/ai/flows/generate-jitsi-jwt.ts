@@ -3,7 +3,7 @@
  * @fileOverview A Genkit flow for generating a Jitsi JWT for secure meetings.
  */
 
-import { ai } from '@/ai/genkit';
+import { defineFlow, type Flow } from 'genkit';
 import { z } from 'zod';
 import * as jwt from 'jsonwebtoken';
 
@@ -28,7 +28,7 @@ export type GenerateJitsiJwtOutput = z.infer<typeof GenerateJitsiJwtOutputSchema
 const JITSI_APP_ID = process.env.JITSI_APP_ID;
 const JITSI_PRIVATE_KEY = process.env.JITSI_PRIVATE_KEY;
 
-export const generateJitsiJwtFlow = ai.defineFlow(
+export const generateJitsiJwtFlow: Flow<GenerateJitsiJwtInput, GenerateJitsiJwtOutput> = defineFlow(
   {
     name: 'generateJitsiJwtFlow',
     inputSchema: GenerateJitsiJwtInputSchema,
