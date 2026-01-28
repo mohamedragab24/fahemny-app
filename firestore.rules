@@ -10,8 +10,11 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     function isAdmin() {
-      return exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) 
-        && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true;
+      let userDoc = get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
+      return request.auth != null
+        && exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        && 'isAdmin' in userDoc.data
+        && userDoc.data.isAdmin == true;
     }
 
     // User Profiles

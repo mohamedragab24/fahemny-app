@@ -10,8 +10,11 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     function isAdmin() {
-      return exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
-        && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.isAdmin == true;
+      let userDoc = get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
+      return request.auth != null
+        && exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        && 'isAdmin' in userDoc.data
+        && userDoc.data.isAdmin == true;
     }
 
     // User Profiles
@@ -41,8 +44,7 @@ service cloud.firestore {
       allow create: if isAuth() && (isOwner(request.resource.data.userId) || isAdmin());
       // A user can only list their own transactions. Admins can list all.
       // The client query MUST include `where('userId', '==', request.auth.uid)`.
-      // The `get` rule below enforces this at the document level for the list operation.
-      allow list: if isAuth();
+      allow list: if isAuth() && (request.query.where.userId == request.auth.uid || isAdmin());
       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update, delete: if false;
     }
@@ -51,9 +53,7 @@ service cloud.firestore {
     match /notifications/{notificationId} {
        allow create: if isAuth();
        // A user can only list their own notifications. Admins can list all.
-       // The client query MUST include `where('userId', '==', request.auth.uid)`.
-       // The `get` rule below enforces this at the document level for the list operation.
-       allow list: if isAuth();
+       allow list: if isAuth() && (request.query.where.userId == request.auth.uid || isAdmin());
        allow get, update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
     }
 
@@ -61,9 +61,7 @@ service cloud.firestore {
     match /withdrawalRequests/{withdrawalId} {
       allow create: if isAuth() && isOwner(request.resource.data.userId);
        // A user can only list their own requests. Admins can list all.
-       // The client query MUST include `where('userId', '==', request.auth.uid)`.
-       // The `get` rule below enforces this at the document level for the list operation.
-      allow list: if isAuth();
+      allow list: if isAuth() && (request.query.where.userId == request.auth.uid || isAdmin());
       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update: if isAuth() && isAdmin();
       allow delete: if false;
