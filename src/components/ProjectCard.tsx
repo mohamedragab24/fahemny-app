@@ -1,98 +1,473 @@
-'use client';
-
-import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { CheckCircle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Project, UserProfile } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import ar from '@/locales/ar';
-
-interface ProjectCardProps {
-  project: Project;
-}
-
-function EmployerDetails({ employerId }: { employerId: string }) {
-  const t = ar.project_details;
-  const firestore = useFirestore();
-  const employerRef = useMemoFirebase(
-    () => (employerId ? doc(firestore, 'userProfiles', employerId) : null),
-    [firestore, employerId]
-  );
-  const { data: employer, isLoading } = useDoc<UserProfile>(employerRef);
-
-  if (isLoading) {
-    return <Skeleton className="h-5 w-32 mt-2" />;
+export default {
+  header: {
+    title: 'فَهِّمْني',
+    links: {
+      browse_requests: 'تصفح الطلبات',
+      create_request: 'اطلب شرح',
+      my_sessions: 'جلساتي',
+      wallet: 'المحفظة',
+      support: 'الدعم',
+      admin_dashboard: 'لوحة التحكم',
+      referrals: 'دعوة الأصدقاء',
+    },
+    auth: {
+      login: 'تسجيل الدخول',
+      signup: 'إنشاء حساب',
+      logout: 'تسجيل الخروج',
+    },
+    userMenu: {
+      profile: 'ملفي الشخصي',
+    },
+    mobile: {
+      toggle: 'فتح القائمة',
+      title: 'القائمة الرئيسية',
+      description: 'القائمة الرئيسية للتنقل في التطبيق'
+    }
+  },
+  footer: {
+    about: 'عن فَهِّمْني',
+    contact: 'اتصل بنا',
+    terms: 'شروط الخدمة',
+    privacy: 'سياسة الخصوصية',
+    rights: 'جميع الحقوق محفوظة.',
+  },
+  home: {
+    hero: {
+      title: 'مش فاهم حاجة؟ محتاج حد يفهمك؟',
+      subtitle: 'جلسة واحدة... حل واحد... من داخل منصة آمنة.',
+      cta_student: 'ابدأ كـ مستفهم',
+      cta_tutor: 'انضم كمفهّم',
+    },
+    how_it_works: {
+      heading: 'آلية العمل',
+      title: 'كيف يعمل؟',
+      steps: [
+        'اطلب اللي محتاج تفهمه.',
+        'اختر السعر.',
+        'قابل مفهّم مناسب.',
+        'جلسة فيديو + شير سكرين.',
+        'قيّم التجربة.',
+      ],
+    },
+    why_fahemny: {
+      heading: 'لماذا فَهِّمْني؟',
+      title: 'لماذا تختار فَهِّمْني؟',
+      features: [
+        'دفع آمن داخل المنصة.',
+        'لا تواصل خارجي.',
+        'تسجيل الجلسات.',
+        'استرداد مضمون.',
+      ],
+    },
+    about: {
+      heading: 'عن المنصة',
+      vision_title: 'رؤية المنصة',
+      vision_description: 'أن تصبح "فَهِّمْني" المنصة العربية الأولى للاستفهام والتفهيم السريع, بديلاً آمناً ومنظماً للتواصل العشوائي خارج المنصات.',
+      mission_title: 'رسالة المنصة',
+      mission_description: 'تسهيل الوصول للمعرفة العملية، ضمان حقوق جميع الأطراف، وخلق بيئة عادلة وشفافة للدخل القائم على الخبرة.',
+    },
+    workflow: {
+      heading: 'آلية العمل داخل المنصة',
+      title: 'بأربع خطوات بسيطة',
+      create_request: {
+        title: 'أنشئ طلبك',
+        description: 'يشمل: عنوان مختصر + المجال، تفاصيل دقيقة، الموعد، الجنس، والسعر.',
+      },
+      view_and_accept: {
+        title: 'قبول الطلب',
+        description: 'يقبل المفهّم الطلب ويحدد رابط الجلسة.',
+      },
+      pay_and_session: {
+        title: 'الدفع والجلسة',
+        description: 'يتم الدفع مسبقًا وحجز المبلغ، ثم تبدأ الجلسة المسجلة بالفيديو.',
+      },
+      feedback: {
+        title: 'الإنهاء والتقييم',
+        description: 'نجاح الجلسة يعني تحويل 80% للمفهّم. عدم تحقيق المطلوب يضمن استرداد المبلغ أو إعادة الجلسة.',
+      },
+    },
+    fields: {
+      heading: 'المجالات',
+      allowed_title: 'أمثلة للمجالات المسموح بها',
+      allowed_examples: [
+        'شرح دروس أو جزئيات تعليمية.',
+        'مهارات تقنية (تطبيقات، ذكاء اصطناعي، تعديل فيديو، تصميم).',
+        'مهارات يدوية أو منزلية.',
+        'خطوات تنفيذ مهمة معينة.',
+      ],
+      forbidden_title: 'المجالات الممنوعة',
+      forbidden_examples: [
+        'الفتاوى أو الاستشارات الدينية (ما عدا علوم القرآن والتجويد).',
+        'أي محتوى سياسي.',
+        'استشارات طبية مباشرة يترتب عليها علاج.',
+        'استشارات قانونية مباشرة يترتب عليها إجراء.',
+        'أي محتوى مخالف للشرع أو به شبهة.',
+        'أي محتوى مخالف للقانون.',
+      ],
+    },
+    payment: {
+      heading: 'نظام الدفع والعمولة',
+      title: 'نظام آمن وعادل للجميع',
+      price: {
+        title: 'تحديد السعر',
+        description: 'السعر يحدده المستفهم عند إنشاء الطلب (الحد الأدنى 50 جنيهًا مصريًا).',
+      },
+      commission: {
+        title: 'العمولة',
+        description: 'يحصل المفهّم على 80% من قيمة الجلسة، وتحصل المنصة على 20% عمولة تنظيم وحماية.',
+      },
+      methods: {
+        title: 'وسائل الدفع',
+        description: 'ادفع بأمان وسهولة عبر وسائل دفع متنوعة مثل Instapay و Vodafone Cash وغيرها.',
+      },
+    },
+    cta: {
+      title: 'جاهز تفهم؟ أو تفهّم؟',
+      subtitle: 'انضم لمجتمعنا الآن وابدأ رحلتك في عالم المعرفة.',
+      signup_button: 'أنشئ حسابًا مجانيًا',
+    },
+  },
+  login: {
+    title: 'أهلاً بعودتك',
+    description: 'سجل دخولك للمتابعة',
+    email_label: 'البريد الإلكتروني',
+    email_placeholder: 'email@example.com',
+    password_label: 'كلمة المرور',
+    forgot_password_link: 'هل نسيت كلمة المرور؟',
+    submit_button: 'تسجيل الدخول',
+    submitting_button: 'جارٍ الدخول...',
+    signup_link_text: 'ليس لديك حساب؟',
+    signup_link: 'أنشئ حسابًا',
+  },
+  register: {
+    title: 'أنشئ حسابًا جديدًا',
+    description: 'خطوات بسيطة تفصلك عن عالم من المعرفة.',
+    name_label: 'الاسم الكامل',
+    name_placeholder: 'مثال: محمد أحمد',
+    email_label: 'البريد الإلكتروني',
+    email_placeholder: 'email@example.com',
+    password_label: 'كلمة المرور',
+    submit_button: 'إنشاء حساب',
+    submitting_button: 'جارٍ الإنشاء...',
+    login_link_text: 'لديك حساب بالفعل؟',
+    login_link: 'سجل الدخول',
+  },
+  forgot_password: {
+    title: 'نسيت كلمة المرور؟',
+    description: 'لا تقلق. أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيينها.',
+    submit_button: 'إرسال رابط إعادة التعيين',
+    submitting_button: 'جارٍ الإرسال...',
+    success_title: 'تم إرسال الرابط!',
+    success_description: 'تفقد بريدك الإلكتروني (بما في ذلك مجلد الرسائل غير المرغوب فيها) للحصول على رابط إعادة تعيين كلمة المرور.',
+    back_to_login: 'العودة إلى صفحة تسجيل الدخول',
+  },
+  select_role: {
+    title: 'اختر دورك',
+    description: 'حدد كيف ستستخدم فَهِّمْني. يمكنك تغيير هذا لاحقًا.',
+    student: {
+      title: 'أنا مستفهم',
+      description: 'أريد أن أطلب شرحًا لمواضيع مختلفة.',
+    },
+    tutor: {
+      title: 'أنا مفهّم',
+      description: 'أريد أن أقدم شروحات وأكسب المال.',
+    },
+    submit_button: 'تأكيد',
+  },
+  terms: {
+    title: 'الشروط والأحكام',
+    description: 'باستخدامك لمنصة "فَهِّمْني"، فإنك توافق على الشروط التالية:',
+    points: [
+      'المنصة وسيط ولا تتحمل محتوى الشرح.',
+      'يُمنع التواصل أو الدفع خارج المنصة.',
+      'تسجيل الجلسات إلزامي.',
+      'للمستفهم حق الاسترداد عند عدم تحقيق المطلوب.',
+      'للمنصة حق إيقاف أي حساب مخالف.',
+      'الالتزام بالمجالات المسموح بها شرط أساسي.',
+    ]
+  },
+  wallet: {
+    title: 'المحفظة',
+    add_balance_button: 'إضافة رصيد',
+    transactions_history: 'سجل المعاملات',
+    export_button: 'تصدير',
+    no_transactions: 'لا توجد معاملات لعرضها.',
+    current_balance_title: 'رصيدك الحالي',
+    current_balance_description: 'هذا هو المبلغ المتاح في حسابك.',
+    withdraw_button: 'سحب الأرباح',
+    table: {
+        description: 'الوصف',
+        type: 'النوع',
+        date: 'التاريخ',
+        amount: 'المبلغ',
+    },
+    types: {
+        deposit: 'إيداع',
+        withdrawal: 'سحب',
+        session_payment: 'دفع جلسة',
+        session_payout: 'أرباح جلسة',
+    },
+    deposit: {
+        title: 'إضافة رصيد للمحفظة',
+        description: 'أدخل المبلغ الذي تود إضافته. سيتم توجيهك إلى صفحة الدفع (محاكاة).',
+        amount_label: 'المبلغ (بالجنيه المصري)',
+        amount_placeholder: '100',
+        min_amount_error: 'الحد الأدنى للإيداع هو 50 جنيهًا',
+        info_text: 'في تطبيق حقيقي، ستكون هناك خطوات إضافية لاختيار وسيلة الدفع وإتمام العملية عبر بوابة دفع آمنة.',
+        submit_button: 'المتابعة إلى الدفع',
+        submitting_button: 'جارٍ التحضير...',
+        success_toast_title: 'تمت العملية بنجاح!',
+        success_toast_description: 'تمت إضافة المبلغ إلى رصيدك.',
+    },
+    withdraw: {
+        title: 'طلب سحب رصيد',
+        description: 'يمكنك طلب سحب المبلغ المتاح في رصيدك. ستتم مراجعة الطلب من قبل الإدارة.',
+        amount_label: 'المبلغ المراد سحبه',
+        amount_error: 'المبلغ المطلوب أكبر من الرصيد المتاح.',
+        min_amount_error: 'الحد الأدنى للسحب هو 100 جنيه.',
+        details_label: 'بيانات التحويل',
+        details_placeholder: 'مثال: رقم Instapay أو رقم فودافون كاش',
+        details_error: 'الرجاء إدخال بيانات التحويل.',
+        submit_button: 'إرسال طلب السحب',
+        submitting_button: 'جارٍ الإرسال...',
+        success_toast_title: 'تم إرسال طلبك!',
+        success_toast_description: 'ستتم مراجعة طلب السحب الخاص بك قريبًا.',
+    },
+  },
+  admin: {
+    title: 'لوحة التحكم',
+    nav: {
+        dashboard: 'لوحة المعلومات',
+        users: 'إدارة المستخدمين',
+        transactions: 'المعاملات المالية',
+        sessions: 'إدارة الجلسات',
+        withdrawals: 'طلبات السحب',
+        discounts: 'أكواد الخصم',
+        add_balance: 'إضافة رصيد',
+        withdraw_balance: 'سحب رصيد',
+        referrals: 'الإحالات',
+        support: 'رسائل الدعم',
+    },
+    access_denied: {
+        title: 'الوصول مرفوض',
+        description: 'ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة.',
+    },
+    dashboard: {
+        title: 'لوحة المعلومات',
+        total_users: 'إجمالي المستخدمين',
+        total_sessions: 'إجمالي الجلسات',
+        platform_revenue: 'أرباح المنصة',
+        user_growth: 'نمو المستخدمين',
+        session_status_distribution: 'توزيع حالات الجلسات',
+    },
+    users: {
+        title: 'إدارة المستخدمين',
+        users_list: 'قائمة المستخدمين',
+        no_users: 'لا يوجد مستخدمون لعرضهم.',
+        table: {
+            name: 'الاسم',
+            email: 'البريد الإلكتروني',
+            role: 'الدور',
+            joined_at: 'تاريخ الانضمام',
+            status: 'الحالة',
+            is_admin: 'مسؤول؟',
+            is_disabled: 'محظور؟',
+        },
+    },
+    transactions: {
+        title: 'المعاملات المالية',
+        page_description: 'عرض جميع المعاملات المالية في النظام.',
+        user: 'المستخدم',
+        no_transactions: 'لا توجد معاملات لعرضها.',
+    },
+    sessions: {
+        title: 'إدارة الجلسات',
+        page_description: 'عرض ومراقبة جميع الجلسات في النظام.',
+        no_sessions: 'لا توجد جلسات لعرضها.',
+        table: {
+            title: 'العنوان',
+            student: 'المستفهم',
+            tutor: 'المفهّم',
+            status: 'الحالة',
+            price: 'السعر',
+            date: 'التاريخ',
+        }
+    },
+    withdrawals: {
+        title: 'طلبات السحب',
+        page_description: 'مراجعة طلبات سحب الأرصدة من المفهّمين.',
+        no_requests: 'لا توجد طلبات سحب حاليًا.',
+        approve_dialog_title: 'تأكيد الموافقة',
+        approve_dialog_description: 'هل أنت متأكد من أنك قمت بتحويل مبلغ {amount} جنيه إلى {userName}؟ لا يمكن التراجع عن هذا الإجراء.',
+        reject_dialog_title: 'تأكيد الرفض',
+        reject_dialog_description: 'أدخل سبب الرفض (اختياري). سيتم إعلام المستخدم.',
+        admin_notes_placeholder: 'سبب الرفض...',
+        table: {
+            user: 'المستخدم',
+            amount: 'المبلغ',
+            details: 'بيانات التحويل',
+            date: 'تاريخ الطلب',
+            status: 'الحالة',
+            actions: 'الإجراءات',
+        },
+    },
+    discounts: {
+        title: 'إدارة أكواد الخصم',
+        description: 'إنشاء وإدارة أكواد الخصم للمستخدمين.',
+        add_button: 'إضافة كود جديد',
+        no_codes: 'لا توجد أكواد خصم لعرضها.',
+        table: {
+            code: 'الكود',
+            type: 'النوع',
+            value: 'القيمة',
+            usage: 'الاستخدام',
+            status: 'الحالة',
+            actions: 'الإجراءات',
+        },
+        form: {
+            add_title: 'إضافة كود خصم جديد',
+            edit_title: 'تعديل كود الخصم',
+            code_label: 'الكود',
+            code_placeholder: 'EID2024',
+            code_exists: 'هذا الكود مستخدم بالفعل.',
+            type_label: 'نوع الخصم',
+            type_fixed: 'مبلغ ثابت',
+            type_percentage: 'نسبة مئوية',
+            value_label: 'قيمة الخصم',
+            value_placeholder_fixed: '50',
+            value_placeholder_percentage: '10',
+            usageLimit_label: 'الحد الأقصى للاستخدام',
+            usageLimit_placeholder: '100',
+            submit: 'حفظ الكود',
+            submitting: 'جارٍ الحفظ...',
+            cancel: 'إلغاء',
+        },
+        active: 'نشط',
+        inactive: 'غير نشط',
+        confirm_delete: 'هل أنت متأكد من حذف هذا الكود؟ لا يمكن التراجع عن هذا الإجراء.',
+    },
+    add_balance: {
+        title: 'إضافة رصيد لمستخدم',
+        description: 'ابحث عن المستخدم عن طريق البريد الإلكتروني أو المعرف (ID) ثم قم بإضافة الرصيد إلى محفظته.',
+        search_label: 'البريد الإلكتروني أو ID المستخدم',
+        search_placeholder: 'user@example.com or aBcDeFg123...',
+        search_button: 'بحث',
+        searching_button: 'جارٍ البحث...',
+        user_not_found: 'لم يتم العثور على مستخدم بهذه البيانات.',
+        user_details: 'تفاصيل المستخدم',
+        current_balance: 'الرصيد الحالي',
+        add_balance_to: 'إضافة رصيد إلى: {name}',
+        amount_label: 'المبلغ (بالجنيه)',
+        description_label: 'سبب الإضافة (سيظهر للمستخدم)',
+        description_placeholder: 'مثال: جائزة مسابقة، تعويض عن مشكلة...',
+        submit_button: 'تأكيد الإضافة',
+        submitting_button: 'جارٍ الإضافة...',
+        success_toast_title: 'تمت الإضافة بنجاح',
+        success_toast_description: 'تمت إضافة {amount} جنيه إلى رصيد {name}.',
+        error_toast_title: 'فشلت الإضافة',
+    },
+    withdraw_balance: {
+        title: 'سحب رصيد من مستخدم',
+        description: 'ابحث عن المستخدم عن طريق البريد الإلكتروني أو المعرف (ID) ثم قم بسحب الرصيد من محفظته.',
+        search_label: 'البريد الإلكتروني أو ID المستخدم',
+        search_placeholder: 'user@example.com or aBcDeFg123...',
+        search_button: 'بحث',
+        searching_button: 'جارٍ البحث...',
+        user_not_found: 'لم يتم العثور على مستخدم بهذه البيانات.',
+        user_details: 'تفاصيل المستخدم',
+        current_balance: 'الرصيد الحالي',
+        withdraw_balance_from: 'سحب رصيد من: {name}',
+        amount_label: 'المبلغ (بالجنيه)',
+        amount_exceeds_balance: 'المبلغ المطلوب أكبر من الرصيد المتاح.',
+        description_label: 'سبب السحب (سيظهر للمستخدم)',
+        description_placeholder: 'مثال: استرجاع مبلغ، تصحيح خطأ...',
+        submit_button: 'تأكيد السحب',
+        submitting_button: 'جارٍ السحب...',
+        success_toast_title: 'تم السحب بنجاح',
+        success_toast_description: 'تم سحب {amount} جنيه من رصيد {name}.',
+        error_toast_title: 'فشل السحب',
+    },
+    referrals: {
+        title: 'متابعة الإحالات',
+        description: 'ابحث عن مستخدم لعرض عدد الإحالات الناجحة التي قام بها.',
+        search_placeholder: 'ابحث بالبريد الإلكتروني أو ID المستخدم...',
+        referral_info: 'معلومات الإحالة للمستخدم',
+        referral_count: 'عدد الإحالات الناجحة',
+        referral_code: 'كود الإحالة الخاص به',
+    },
+    support: {
+        title: 'رسائل الدعم',
+        description: 'عرض الرسائل المرسلة من نموذج "اتصل بنا".',
+        no_messages: 'لا توجد رسائل لعرضها.',
+        table: {
+            name: 'الاسم',
+            email: 'البريد الإلكتروني',
+            subject: 'الموضوع',
+            date: 'تاريخ الإرسال',
+            status: 'الحالة',
+            actions: 'الإجراءات',
+        },
+        view_message: 'عرض الرسالة',
+        status_new: 'جديد',
+        status_read: 'مقروء',
+        status_closed: 'مغلق',
+        change_status: 'تغيير الحالة',
+    },
+  },
+  notifications: {
+    title: 'الإشعارات',
+    no_notifications: 'لا توجد إشعارات جديدة.',
+    view_all: 'عرض كل الإشعارات',
+    request_accepted_title: 'تم قبول طلبك!',
+    request_accepted_message: 'لقد قبل المفهّم "{tutorName}" طلبك لجلسة "{sessionTitle}".',
+    new_withdrawal_request_title: 'طلب سحب جديد',
+    new_withdrawal_request_message: 'طلب سحب جديد من {userName} بمبلغ {amount} جنيه.',
+    withdrawal_approved_title: 'تمت الموافقة على طلب السحب',
+    withdrawal_approved_message: 'تمت الموافقة على طلب السحب الخاص بك بمبلغ {amount} جنيه.',
+    withdrawal_rejected_title: 'تم رفض طلب السحب',
+    withdrawal_rejected_message: 'تم رفض طلب السحب الخاص بك. السبب: {reason}',
+    balance_deducted_title: 'تم خصم رصيد من محفظتك',
+    balance_deducted_message: 'قام المسؤول بخصم مبلغ {amount} جنيه من رصيدك. السبب: {reason}',
+  },
+  browse_requests: {
+    search_placeholder: 'ابحث بعنوان الطلب...',
+    filter_by_field: 'تصفية حسب المجال',
+    all_fields: 'كل المجالات',
+    price_range: 'نطاق السعر',
+  },
+  review_request: {
+    discount_code_label: 'هل لديك كود خصم؟',
+    apply_button: 'تطبيق',
+    applying_button: 'جارٍ التطبيق...',
+    code_applied_toast: 'تم تطبيق الخصم بنجاح!',
+    invalid_code_toast: 'كود الخصم غير صالح أو انتهى استخدامه.',
+    discount_label: 'الخصم:',
+    final_price_label: 'السعر النهائي:',
+  },
+  referrals: {
+    title: 'دعوة الأصدقاء',
+    description: 'ادعُ أصدقاءك للانضمام إلى "فَهِّمْني". عندما يسجلون باستخدام رابط الإحالة الخاص بك، سيزداد عدد إحالاتك.',
+    your_link: 'رابط الإحالة الخاص بك',
+    copy_link: 'نسخ الرابط',
+    copied: 'تم النسخ!',
+    referral_count_title: 'عدد الإحالات الناجحة',
+    users: 'مستخدمين',
+    no_referrals: 'لم تقم بأي إحالات ناجحة بعد.',
+  },
+  contact: {
+    title: 'اتصل بنا',
+    description: 'لديك سؤال أو اقتراح؟ املأ النموذج أدناه وسنتواصل معك في أقرب وقت.',
+    name_label: 'الاسم الكامل',
+    name_placeholder: 'اسمك',
+    email_label: 'البريد الإلكتروني',
+    email_placeholder: 'email@example.com',
+    subject_label: 'الموضوع',
+    subject_placeholder: 'عنوان رسالتك',
+    message_label: 'الرسالة',
+    message_placeholder: 'اكتب رسالتك هنا...',
+    submit_button: 'إرسال الرسالة',
+    success_toast_title: 'تم إرسال رسالتك بنجاح!',
+    success_toast_description: 'سنقوم بالرد عليك في أقرب وقت ممكن.',
+    error_toast_title: 'فشل إرسال الرسالة',
   }
-
-  if (!employer) {
-    return <span className="text-sm text-muted-foreground">{t.by_employer}</span>;
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-2">
-      <span className="text-sm text-muted-foreground">
-        بواسطة {employer.firstName} {employer.lastName}
-      </span>
-      {employer.isVerified && <CheckCircle className="h-4 w-4 text-primary" />}
-    </div>
-  );
-}
-
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
-
-export default function ProjectCard({ project }: ProjectCardProps) {
-  const t = ar.project_details;
-  const statusMap: Record<string, { text: string; variant: BadgeVariant }> = {
-    open: { text: ar.project_statuses.open, variant: 'secondary' },
-    in_progress: { text: ar.project_statuses.in_progress, variant: 'default' },
-    completed: { text: ar.project_statuses.completed, variant: 'outline' },
-    pending_approval: { text: ar.project_statuses.pending_approval, variant: 'destructive' },
-    rejected: { text: ar.project_statuses.rejected, variant: 'destructive' },
-  };
-  const statusInfo = statusMap[project.status];
-
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className='flex justify-between items-start gap-2'>
-          <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
-          {statusInfo && <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>}
-        </div>
-        <CardDescription>
-          <EmployerDetails employerId={project.employerId} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        <p className="text-muted-foreground line-clamp-3">
-          {project.description}
-        </p>
-        {project.tags && project.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {project.tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between items-center">
-        <div className="font-bold text-primary">${project.budget}</div>
-        <Link href={`/projects/${project.id}`}>
-          <Button>{t.view_project}</Button>
-        </Link>
-      </CardFooter>
-    </Card>
-  );
-}
+} as const;

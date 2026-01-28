@@ -435,10 +435,6 @@ export default {
     all_fields: 'كل المجالات',
     price_range: 'نطاق السعر',
   },
-  project_details: {
-      by_employer: 'بواسطة',
-      view_project: 'عرض التفاصيل',
-  },
   review_request: {
     discount_code_label: 'هل لديك كود خصم؟',
     apply_button: 'تطبيق',
