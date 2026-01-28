@@ -306,6 +306,22 @@
             "createdAt": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "code", "type", "value", "usageLimit", "usageCount", "isActive", "createdAt"]
+    },
+    "ContactMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ContactMessage",
+      "type": "object",
+      "description": "Represents a contact/support message submitted by a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "read", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message", "status", "createdAt"]
     }
   },
   "auth": {
@@ -361,6 +377,14 @@
             "entityName": "DiscountCode",
             "schema": { "$ref": "#/backend/entities/DiscountCode" },
             "description": "Stores all discount codes created by admins."
+        }
+      },
+      {
+        "path": "/contactMessages/{messageId}",
+        "definition": {
+            "entityName": "ContactMessage",
+            "schema": { "$ref": "#/backend/entities/ContactMessage" },
+            "description": "Stores messages submitted through the contact form."
         }
       }
     ],

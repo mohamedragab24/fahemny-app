@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { LayoutDashboard, ShieldAlert, Users, CreditCard, BookCopy, HandCoins, TicketPercent, Coins } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, Users, CreditCard, BookCopy, HandCoins, TicketPercent, Coins, MessagesSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ar from '@/locales/ar';
 
@@ -31,9 +31,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { href: '/admin/sessions', label: t.nav.sessions, icon: <BookCopy className="h-4 w-4" /> },
     { href: '/admin/transactions', label: t.nav.transactions, icon: <CreditCard className="h-4 w-4" /> },
     { href: '/admin/add-balance', label: t.nav.add_balance, icon: <Coins className="h-4 w-4" /> },
-    { href: '/admin/withdraw-balance', label: t.nav.withdraw_balance, icon: <HandCoins className="h-4 w-4" /> },
     { href: '/admin/withdrawals', label: t.nav.withdrawals, icon: <HandCoins className="h-4 w-4" /> },
     { href: '/admin/discounts', label: t.nav.discounts, icon: <TicketPercent className="h-4 w-4" /> },
+    { href: '/admin/referrals', label: t.nav.referrals, icon: <Users className="h-4 w-4" /> },
+    { href: '/admin/support', label: t.nav.support, icon: <MessagesSquare className="h-4 w-4" /> },
   ];
 
   if (isUserLoading || isProfileLoading) {

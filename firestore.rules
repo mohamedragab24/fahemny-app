@@ -39,9 +39,6 @@ service cloud.firestore {
     // Transactions
     match /transactions/{transactionId} {
       allow create: if isAuth() && (isOwner(request.resource.data.userId) || isAdmin());
-      // A user can only list their own transactions. Admins can list all.
-      // The client query MUST include `where('userId', '==', request.auth.uid)`.
-      // The `get` rule below enforces this at the document level for the list operation.
       allow list: if isAuth();
       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update, delete: if false;
@@ -50,9 +47,6 @@ service cloud.firestore {
     // Notifications
     match /notifications/{notificationId} {
        allow create: if isAuth();
-       // A user can only list their own notifications. Admins can list all.
-       // The client query MUST include `where('userId', '==', request.auth.uid)`.
-       // The `get` rule below enforces this at the document level for the list operation.
        allow list: if isAuth();
        allow get, update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
     }
@@ -60,9 +54,6 @@ service cloud.firestore {
     // Withdrawal Requests
     match /withdrawalRequests/{withdrawalId} {
       allow create: if isAuth() && isOwner(request.resource.data.userId);
-      // A user can only list their own requests. Admins can list all.
-      // The client query MUST include `where('userId', '==', request.auth.uid)`.
-      // The `get` rule below enforces this at the document level for the list operation.
       allow list: if isAuth();
       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
       allow update: if isAuth() && isAdmin();
@@ -73,6 +64,13 @@ service cloud.firestore {
     match /discountCodes/{discountId} {
       allow create, update, delete: if isAuth() && isAdmin();
       allow get, list: if isAuth();
+    }
+
+    // Contact Messages
+    match /contactMessages/{messageId} {
+      allow create: if true; // Anyone can send a message
+      allow list, get, update: if isAuth() && isAdmin();
+      allow delete: if isAuth() && isAdmin();
     }
   }
 }
