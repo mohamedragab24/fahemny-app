@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -14,6 +15,8 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 function getInitials(name?: string) {
@@ -28,9 +31,28 @@ export default function AdminUsersPage() {
   const t = ar.admin.users;
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   const usersQuery = useMemoFirebase(() => collection(firestore, 'userProfiles'), [firestore]);
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    return users
+      .filter(user => {
+        const searchMatch = searchTerm === '' ||
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const roleMatch = roleFilter === 'all' || user.role === roleFilter || (roleFilter === 'none' && !user.role);
+        
+        return searchMatch && roleMatch;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [users, searchTerm, roleFilter]);
+
 
   const handleToggleUserStatus = (user: UserProfile, isDisabled: boolean) => {
     const userRef = doc(firestore, 'userProfiles', user.id);
@@ -50,8 +72,6 @@ export default function AdminUsersPage() {
     });
   };
 
-  const sortedUsers = users?.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
   return (
     <Card>
       <CardHeader>
@@ -59,6 +79,26 @@ export default function AdminUsersPage() {
         <CardDescription>{t.users_list}</CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center gap-4 mb-6">
+          <Input 
+            placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="تصفية بالدور" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الأدوار</SelectItem>
+              <SelectItem value="student">مستفهم</SelectItem>
+              <SelectItem value="tutor">مفهّم</SelectItem>
+              <SelectItem value="none">لم يحدد</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {isLoading ? (
             <div className="space-y-2">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
@@ -76,7 +116,7 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedUsers && sortedUsers.length > 0 ? sortedUsers.map((user) => (
+              {filteredUsers && filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <Link href={`/users/${user.id}`} className="group/userlink">
@@ -118,7 +158,7 @@ export default function AdminUsersPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center">{t.no_users}</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center">لا يوجد مستخدمون يطابقون معايير البحث.</TableCell>
                 </TableRow>
               )}
             </TableBody>
