@@ -1,7 +1,7 @@
 'use client';
 
 import ar from '@/locales/ar';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage, useFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
