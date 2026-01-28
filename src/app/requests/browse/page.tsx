@@ -13,8 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { UserInfoLink } from '@/components/UserInfoLink';
 import { useUser, useMemoFirebase } from '@/firebase';
 
@@ -27,8 +25,6 @@ export default function BrowseRequestsPage() {
   const router = useRouter();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedField, setSelectedField] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 1000]);
   
   const t_notifications = ar.notifications;
 
@@ -48,24 +44,10 @@ export default function BrowseRequestsPage() {
       if (loadMore) setIsLoadingMore(true);
       else setIsLoading(true);
 
-      const queries = [
-        where('status', '==', 'open'),
-        orderBy('createdAt', 'desc')
-      ];
-
-      if (selectedField !== 'all') {
-        queries.push(where('field', '==', selectedField));
-      }
-      if (priceRange[1] < 1000) {
-        queries.push(where('price', '<=', priceRange[1]));
-      }
-       if (priceRange[0] > 0) {
-        queries.push(where('price', '>=', priceRange[0]));
-      }
-
       let q = query(
         collection(firestore, 'sessionRequests'),
-        ...queries,
+        where('status', '==', 'open'),
+        orderBy('createdAt', 'desc'),
         limit(REQUESTS_PER_PAGE)
       );
 
@@ -93,33 +75,20 @@ export default function BrowseRequestsPage() {
       }
     } catch (e: any) {
       console.error("Failed to fetch requests", e);
-      toast({ variant: 'destructive', title: 'فشل تحميل الطلبات', description: e.message.includes("indexes") ? "تحتاج قاعدة البيانات إلى فهرس جديد لهذا الفلتر." : e.message });
+      toast({ variant: 'destructive', title: 'فشل تحميل الطلبات', description: e.message });
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
   };
   
-  // Re-fetch when filters change
   useEffect(() => {
-    // Reset and fetch
-    setRequests([]);
-    setLastVisible(null);
-    setHasMore(true);
     fetchRequests(false);
-  }, [selectedField, priceRange]);
-
-
-  const availableFields = useMemo(() => {
-    if (!requests) return [];
-    const fields = new Set(requests.map(r => r.field));
-    return Array.from(fields);
-  }, [requests]);
+  }, []);
 
   const { matchingRequests, otherRequests } = useMemo(() => {
     if (!requests || !userProfile) return { matchingRequests: [], otherRequests: [] };
     
-    // Client-side search on the already fetched data
     const searched = requests.filter(request => {
       return searchTerm === '' || request.title.toLowerCase().includes(searchTerm.toLowerCase());
     });
@@ -262,46 +231,20 @@ export default function BrowseRequestsPage() {
     <div className="container py-8">
       <h1 className="text-3xl font-bold font-headline mb-6">{t.browse_requests}</h1>
 
-      <div className="mb-8 p-4 border rounded-lg bg-secondary/50 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <div className="md:col-span-1">
+      <div className="mb-8 p-4 border rounded-lg bg-secondary/50">
           <label className="text-sm font-medium mb-2 block">{t_browse.search_placeholder}</label>
           <Input 
             placeholder={t_browse.search_placeholder}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
-        </div>
-        <div className="md:col-span-1">
-          <label className="text-sm font-medium mb-2 block">{t_browse.filter_by_field}</label>
-          <Select value={selectedField} onValueChange={setSelectedField}>
-            <SelectTrigger>
-              <SelectValue placeholder={t_browse.filter_by_field} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t_browse.all_fields}</SelectItem>
-              {availableFields.map(field => (
-                <SelectItem key={field} value={field}>{field}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="md:col-span-1">
-          <label className="text-sm font-medium mb-2 block">{t_browse.price_range}: <span className="font-bold text-primary">{priceRange[0]} - {priceRange[1]} جنيه</span></label>
-          <Slider
-            min={0}
-            max={1000}
-            step={50}
-            value={[priceRange[1]]}
-            onValueChange={value => setPriceRange([priceRange[0], value[0]])}
-          />
-        </div>
       </div>
       
        {isLoading && <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /></div>}
 
        {!isLoading && requests.length === 0 ? (
         <div className="border rounded-lg p-8 text-center bg-secondary/50 mt-8">
-            <p className="text-muted-foreground">لا توجد طلبات شرح متاحة تطابق معايير البحث. حاول مرة أخرى لاحقًا.</p>
+            <p className="text-muted-foreground">لا توجد طلبات شرح متاحة حاليًا. حاول مرة أخرى لاحقًا.</p>
         </div>
       ) : (
         <>
@@ -324,12 +267,16 @@ export default function BrowseRequestsPage() {
                 </div>
             </section>
             )}
-             {hasMore && (
+             {hasMore && !isLoadingMore && (
                 <div className="mt-8 text-center">
-                    <Button onClick={() => fetchRequests(true)} disabled={isLoadingMore}>
-                        {isLoadingMore && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                    <Button onClick={() => fetchRequests(true)}>
                         تحميل المزيد
                     </Button>
+                </div>
+            )}
+            {isLoadingMore && (
+                <div className="mt-8 text-center">
+                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             )}
         </>
