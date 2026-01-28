@@ -252,8 +252,10 @@ export default {
     dashboard: {
         title: 'لوحة المعلومات',
         total_users: 'إجمالي المستخدمين',
-        total_tutors: 'إجمالي المفهّمين',
-        total_students: 'إجمالي المستفهمين',
+        total_sessions: 'إجمالي الجلسات',
+        platform_revenue: 'أرباح المنصة',
+        user_growth: 'نمو المستخدمين',
+        session_status_distribution: 'توزيع حالات الجلسات',
     },
     users: {
         title: 'إدارة المستخدمين',
