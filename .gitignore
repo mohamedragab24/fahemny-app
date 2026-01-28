@@ -18,13 +18,11 @@
 # misc
 .DS_Store
 *.pem
-
-# debug
-npm-debug.log*
+*.log
+firebase-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-firebase-debug.log
+
 
 # local env files
 .env.local
@@ -35,8 +33,6 @@ firebase-debug.log
 # vercel
 .vercel
 
-# firebase
-.firebase
-
-# misc
+# typescript
 *.tsbuildinfo
+next-env.d.ts
