@@ -32,12 +32,18 @@ service cloud.firestore {
 
     // Session Requests
     match /sessionRequests/{requestId} {
-      allow read: if isAuth() && (
-        (isTutor() && resource.data.status == 'open') || // Tutors can read open requests to browse them
-        resource.data.studentId == request.auth.uid || 
-        (resource.data.tutorId != null && resource.data.tutorId == request.auth.uid) ||
-        isAdmin()
-      );
+      // Admins can read anything
+      allow read: if isAdmin();
+      
+      // A user can read a session if they are the student
+      allow read: if isAuth() && resource.data.studentId == request.auth.uid;
+      
+      // A tutor can read a session if they are assigned to it
+      allow read: if isAuth() && isTutor() && resource.data.tutorId == request.auth.uid;
+
+      // A tutor can read (browse) any open session
+      allow read: if isAuth() && isTutor() && resource.data.status == 'open';
+
       allow create: if isAuth() && request.resource.data.studentId == request.auth.uid;
       allow update: if isAuth() && (
         isOwner(resource.data.studentId) || 
@@ -49,7 +55,9 @@ service cloud.firestore {
     
     // Transactions
     match /transactions/{transactionId} {
-      allow read: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+      allow read: if isAdmin();
+      allow read: if isAuth() && isOwner(resource.data.userId);
+
       allow create: if isAuth() && (isOwner(request.resource.data.userId) || isAdmin());
       allow update, delete: if false;
     }
@@ -57,29 +65,33 @@ service cloud.firestore {
     // Notifications
     match /notifications/{notificationId} {
        allow create: if isAuth(); // Server-side writes will bypass this.
-       allow read, update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+       allow read, update, delete: if isAdmin();
+       allow read, update, delete: if isAuth() && isOwner(resource.data.userId);
     }
 
     // Withdrawal Requests
     match /withdrawalRequests/{withdrawalId} {
       allow create: if isAuth() && isOwner(request.resource.data.userId);
-      allow list: if isAuth() && isAdmin();
-      allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
-      allow update: if isAuth() && isAdmin();
+      allow list: if isAdmin();
+      
+      allow get: if isAdmin();
+      allow get: if isAuth() && isOwner(resource.data.userId);
+
+      allow update: if isAdmin();
       allow delete: if false;
     }
 
     // Discount Codes
     match /discountCodes/{discountId} {
-      allow create, update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if isAdmin();
       allow get, list: if isAuth();
     }
 
     // Contact Messages
     match /contactMessages/{messageId} {
       allow create: if true; // Anyone can send a message
-      allow list, get, update: if isAuth() && isAdmin();
-      allow delete: if isAuth() && isAdmin();
+      allow list, get, update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }
