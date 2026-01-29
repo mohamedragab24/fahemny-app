@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import type { UserProfile, SessionRequest, Transaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,13 +22,15 @@ export default function AdminDashboardPage() {
     return date.toISOString();
   }, []);
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'userProfiles'), where('createdAt', '>', thirtyDaysAgo)), [firestore, thirtyDaysAgo]);
+  const DATA_LIMIT = 1000;
+
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'userProfiles'), where('createdAt', '>', thirtyDaysAgo), orderBy('createdAt', 'desc'), limit(DATA_LIMIT)), [firestore, thirtyDaysAgo]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
   
-  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'sessionRequests'), where('createdAt', '>', thirtyDaysAgo)), [firestore, thirtyDaysAgo]);
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'sessionRequests'), where('createdAt', '>', thirtyDaysAgo), orderBy('createdAt', 'desc'), limit(DATA_LIMIT)), [firestore, thirtyDaysAgo]);
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
 
-  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'transactions'), where('createdAt', '>', thirtyDaysAgo)), [firestore, thirtyDaysAgo]);
+  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'transactions'), where('createdAt', '>', thirtyDaysAgo), orderBy('createdAt', 'desc'), limit(DATA_LIMIT)), [firestore, thirtyDaysAgo]);
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
   const isLoading = isLoadingUsers || isLoadingSessions || isLoadingTransactions;
@@ -134,7 +136,7 @@ export default function AdminDashboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>{t.user_growth}</CardTitle>
-                    <CardDescription>عدد المستخدمين الجدد المسجلين بمرور الوقت.</CardDescription>
+                    <CardDescription>نمو المستخدمين الجدد خلال آخر 30 يوم (بناءً على آخر {DATA_LIMIT} مستخدم).</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={{}} className="h-[250px] w-full">
@@ -151,7 +153,7 @@ export default function AdminDashboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>{t.session_status_distribution}</CardTitle>
-                     <CardDescription>توزيع حالات الجلسات الجديدة في آخر 30 يوم.</CardDescription>
+                     <CardDescription>توزيع حالات الجلسات الجديدة خلال آخر 30 يوم (بناءً على آخر {DATA_LIMIT} جلسة).</CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center">
                     <ChartContainer config={{}} className="h-[250px] w-full max-w-xs">
