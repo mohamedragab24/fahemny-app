@@ -28,31 +28,27 @@ service cloud.firestore {
 
     // Session Requests
     match /sessionRequests/{requestId} {
-      allow read: if isAuth() && (
-        resource.data.studentId == request.auth.uid || 
-        (resource.data.tutorId != null && resource.data.tutorId == request.auth.uid) ||
-        isAdmin()
-      );
+      allow get: if isAuth() && (resource.data.studentId == request.auth.uid || (resource.data.tutorId != null && resource.data.tutorId == request.auth.uid) || isAdmin());
+      allow list: if isAuth(); // Client must filter queries by studentId or tutorId
       allow create: if isAuth() && request.resource.data.studentId == request.auth.uid;
-      allow update: if isAuth() && (
-        isOwner(resource.data.studentId) || 
-        (resource.data.tutorId != null && isOwner(resource.data.tutorId)) ||
-        isAdmin()
-      );
+      allow update: if isAuth() && (isOwner(resource.data.studentId) || (resource.data.tutorId != null && isOwner(resource.data.tutorId)) || isAdmin());
       allow delete: if false;
     }
     
     // Transactions
     match /transactions/{transactionId} {
-      allow read: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+      allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isAuth(); // Client must filter by userId
       allow create: if isAuth() && (isOwner(request.resource.data.userId) || isAdmin());
       allow update, delete: if false;
     }
 
     // Notifications
     match /notifications/{notificationId} {
-       allow create: if isAuth(); // Server-side writes will bypass this.
-       allow read, update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+       allow create: if isAuth() && isAdmin(); // Only allow admins to create
+       allow get: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
+       allow list: if isAuth(); // Client must filter by userId
+       allow update, delete: if isAuth() && (isOwner(resource.data.userId) || isAdmin());
     }
 
     // Withdrawal Requests
