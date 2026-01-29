@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, doc, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import ar from '@/locales/ar';
@@ -44,36 +44,42 @@ export default function AdminUsersPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchUsers = async (loadMore = false) => {
+  const fetchUsers = useCallback(async (loadMore = false) => {
     if (loadMore && !hasMore) return;
     
     try {
-      if (loadMore) setIsLoadingMore(true);
-      else setIsLoading(true);
-
-      let q = query(
-        collection(firestore, 'userProfiles'),
-        orderBy('createdAt', 'desc'),
-        limit(USERS_PER_PAGE)
-      );
-
-      if (loadMore && lastVisible) {
-        q = query(q, startAfter(lastVisible));
+      let currentLastVisible = lastVisible;
+      if (loadMore) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        currentLastVisible = null; 
       }
+
+      const qBase = collection(firestore, 'userProfiles');
+      const queryConstraints: any[] = [orderBy('createdAt', 'desc')];
+      
+      if (roleFilter === 'student' || roleFilter === 'tutor') {
+        queryConstraints.push(where('role', '==', roleFilter));
+      }
+      
+      if (loadMore && currentLastVisible) {
+        queryConstraints.push(startAfter(currentLastVisible));
+      }
+      
+      queryConstraints.push(limit(USERS_PER_PAGE));
+
+      const q = query(qBase, ...queryConstraints);
 
       const documentSnapshots = await getDocs(q);
       const newUsers = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
       
-      setUsers(prev => loadMore ? [...prev, ...newUsers] : newUsers);
+      setUsers(prev => (loadMore && currentLastVisible) ? [...prev, ...newUsers] : newUsers);
       
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-      setLastVisible(lastDoc);
+      setLastVisible(lastDoc || null);
 
-      if (documentSnapshots.docs.length < USERS_PER_PAGE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
+      setHasMore(documentSnapshots.docs.length === USERS_PER_PAGE);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ variant: 'destructive', title: 'فشل تحميل المستخدمين' });
@@ -81,11 +87,13 @@ export default function AdminUsersPage() {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  };
+  }, [firestore, roleFilter, hasMore, lastVisible]);
+
 
   useEffect(() => {
     fetchUsers(false);
-  }, [firestore]);
+  }, [roleFilter]);
+
 
   const filteredUsers = useMemo(() => {
     return users
@@ -94,7 +102,7 @@ export default function AdminUsersPage() {
           user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const roleMatch = roleFilter === 'all' || user.role === roleFilter || (roleFilter === 'none' && !user.role);
+        const roleMatch = roleFilter !== 'none' || !user.role;
         
         return searchMatch && roleMatch;
       });

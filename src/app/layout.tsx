@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Cairo } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "@/components/layout/header";
@@ -9,12 +9,12 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 import ar from "@/locales/ar";
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "arabic"],
   variable: "--font-body",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
+const cairo = Cairo({
+  subsets: ["latin", "arabic"],
   variable: "--font-headline",
 });
 
@@ -36,7 +36,7 @@ export default function RootLayout({
         className={cn(
           "relative h-full font-sans antialiased",
           inter.variable,
-          spaceGrotesk.variable
+          cairo.variable
         )}
       >
         <FirebaseClientProvider>
