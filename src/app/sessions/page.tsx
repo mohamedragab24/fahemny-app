@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
 import { collection, query, where, doc, updateDoc, getDocs, runTransaction, increment, documentId } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
