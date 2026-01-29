@@ -60,7 +60,7 @@ const config = {
       },
       fontFamily: {
         body: ["var(--font-body)"],
-        headline: ["var(--font-headline)"],
+        headline: ["var(--font-body)"],
       },
       keyframes: {
         "accordion-down": {

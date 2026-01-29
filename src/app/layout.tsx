@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Cairo } from "next/font/google";
+import { Cairo } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "@/components/layout/header";
@@ -8,14 +8,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import ar from "@/locales/ar";
 
-const inter = Inter({
-  subsets: ["latin", "arabic"],
-  variable: "--font-body",
-});
-
 const cairo = Cairo({
-  subsets: ["latin", "arabic"],
-  variable: "--font-headline",
+  subsets: ["arabic", "latin"],
+  variable: "--font-body",
 });
 
 export const metadata: Metadata = {
@@ -34,8 +29,7 @@ export default function RootLayout({
     <html lang={locale} dir="rtl">
       <body
         className={cn(
-          "relative h-full font-sans antialiased",
-          inter.variable,
+          "relative h-full font-body antialiased",
           cairo.variable
         )}
       >
