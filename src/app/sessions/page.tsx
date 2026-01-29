@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import ar from '@/locales/ar';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { SessionRequest, UserProfile } from '@/lib/types';
-import { collection, query, where, doc, updateDoc, getDocs, runTransaction, increment } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, getDocs, runTransaction, increment, documentId } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,27 +20,19 @@ import { Textarea } from '@/components/ui/textarea';
 
 
 // Helper component to display the other user's name and rating
-function OtherUserDetails({ userId, label }: { userId: string, label: string }) {
-  const firestore = useFirestore();
-  const userProfileRef = useMemoFirebase(
-    () => (userId ? doc(firestore, 'userProfiles', userId) : null),
-    [firestore, userId]
-  );
-  const { data: userProfile, isLoading } = useDoc<UserProfile>(userProfileRef);
-
-  if (isLoading) return <Skeleton className="h-5 w-32 mt-1" />;
-  if (!userProfile) return null;
-
+function OtherUserDetails({ userId, label, user }: { userId: string, label: string, user?: UserProfile }) {
+  if (!user) return <Skeleton className="h-5 w-32 mt-1" />;
+  
   return (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div className="flex items-center gap-1">
             <span>{label}:</span>
-            <UserInfoLink userId={userId} className="text-sm font-semibold" />
+            <UserInfoLink userId={userId} name={user.name} />
         </div>
-        {userProfile.rating && (
+        {user.rating !== undefined && (
             <div className="flex items-center gap-1 text-yellow-500">
                 <Star className="w-4 h-4 fill-current" />
-                <span className="font-semibold">{userProfile.rating.toFixed(1)}</span>
+                <span className="font-semibold">{user.rating.toFixed(1)}</span>
             </div>
         )}
     </div>
@@ -172,6 +164,7 @@ export default function MySessionsPage() {
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [ratingSession, setRatingSession] = useState<SessionRequest | null>(null);
+  const [relatedUsers, setRelatedUsers] = useState<Record<string, UserProfile>>({});
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userProfiles', user.uid) : null),
@@ -192,6 +185,38 @@ export default function MySessionsPage() {
   }, [firestore, user, userProfile]);
 
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<SessionRequest>(sessionsQuery);
+
+  useEffect(() => {
+    if (!sessions || sessions.length === 0) return;
+
+    const fetchRelatedUsers = async () => {
+      const userIds = new Set<string>();
+      sessions.forEach(s => {
+        if (s.studentId && !relatedUsers[s.studentId]) userIds.add(s.studentId);
+        if (s.tutorId && !relatedUsers[s.tutorId]) userIds.add(s.tutorId);
+      });
+      
+      if (userIds.size === 0) return;
+
+      const ids = Array.from(userIds);
+      const userChunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 30) {
+        userChunks.push(ids.slice(i, i + 30));
+      }
+
+      const newUsers: Record<string, UserProfile> = {};
+      for (const chunk of userChunks) {
+        const q = query(collection(firestore, 'userProfiles'), where(documentId(), 'in', chunk));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => {
+          newUsers[doc.id] = { id: doc.id, ...doc.data() } as UserProfile;
+        });
+      }
+      setRelatedUsers(prev => ({ ...prev, ...newUsers }));
+    };
+
+    fetchRelatedUsers();
+  }, [sessions, firestore, relatedUsers]);
   
   const handleCompleteSession = async (session: SessionRequest) => {
     if (!session.tutorId) return;
@@ -315,8 +340,8 @@ export default function MySessionsPage() {
                 <p>{new Date(session.sessionDate).toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 <p>الساعة: {session.sessionTime}</p>
               </div>
-              {userProfile?.role === 'student' && session.tutorId ? <OtherUserDetails userId={session.tutorId} label="المفهّم" /> : null}
-              {userProfile?.role === 'tutor' && <OtherUserDetails userId={session.studentId} label="المستفهم" />}
+              {userProfile?.role === 'student' && session.tutorId ? <OtherUserDetails userId={session.tutorId} label="المفهّم" user={relatedUsers[session.tutorId]} /> : null}
+              {userProfile?.role === 'tutor' && <OtherUserDetails userId={session.studentId} label="المستفهم" user={relatedUsers[session.studentId]} />}
                <p className="font-bold text-primary text-lg">{session.price} جنيه</p>
             </CardContent>
             <CardFooter className="flex flex-col items-stretch gap-2">

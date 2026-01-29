@@ -53,13 +53,13 @@ export default function AdminUsersPage() {
         setIsLoadingMore(true);
       } else {
         setIsLoading(true);
-        currentLastVisible = null; 
+        currentLastVisible = null; // Reset for new filters
       }
 
       const qBase = collection(firestore, 'userProfiles');
       const queryConstraints: any[] = [orderBy('createdAt', 'desc')];
       
-      if (roleFilter === 'student' || roleFilter === 'tutor') {
+      if (roleFilter !== 'all') {
         queryConstraints.push(where('role', '==', roleFilter));
       }
       
@@ -87,26 +87,22 @@ export default function AdminUsersPage() {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [firestore, roleFilter, hasMore, lastVisible]);
+  }, [firestore, roleFilter, toast, hasMore, lastVisible]);
 
 
   useEffect(() => {
     fetchUsers(false);
-  }, [roleFilter]);
+  }, [fetchUsers, roleFilter]); // fetchUsers is now memoized with useCallback
 
 
   const filteredUsers = useMemo(() => {
-    return users
-      .filter(user => {
-        const searchMatch = searchTerm === '' ||
-          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const roleMatch = roleFilter !== 'none' || !user.role;
-        
-        return searchMatch && roleMatch;
-      });
-  }, [users, searchTerm, roleFilter]);
+    // Client-side search for name/email on the currently loaded page of users
+    if (!searchTerm) return users;
+    return users.filter(user => 
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
 
 
   const handleToggleUserStatus = (userId: string, isDisabled: boolean, userName: string) => {
