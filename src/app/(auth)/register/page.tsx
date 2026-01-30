@@ -29,6 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import ar from "@/locales/ar";
 import { Loader2 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const registerSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
@@ -36,7 +38,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 });
 
-export default function RegisterPage() {
+function RegisterForm() {
   const t = ar.register;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -182,4 +184,32 @@ export default function RegisterPage() {
       </div>
     </Card>
   );
+}
+
+function RegisterPageSkeleton() {
+    return (
+        <Card>
+            <CardHeader className="space-y-1 text-center">
+                <Skeleton className="h-8 w-48 mx-auto" />
+                <Skeleton className="h-5 w-64 mx-auto" />
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+                <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
+                <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
+                <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
+                <Skeleton className="h-10 w-full" />
+            </CardContent>
+            <div className="mt-4 text-center text-sm p-6 pt-0">
+                <Skeleton className="h-5 w-48 mx-auto" />
+            </div>
+        </Card>
+    );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<RegisterPageSkeleton />}>
+      <RegisterForm />
+    </Suspense>
+  )
 }
